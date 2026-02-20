@@ -10,9 +10,8 @@
           <div class="balance">
             <q-btn-toggle
               v-model="balancestakeselector"
-              text-color="white"
-              toggle-text-color="primary"
-              flat
+              toggle-color="primary"
+              color="accent"
               :options="[
                 {
                   label: $t('strings.xeqBalance'),
@@ -46,6 +45,10 @@
               >{{ $t("strings.xeqUnlockedShort") }}:
               <FormatOxen :amount="info.unlocked_balance"
             /></span>
+            <span v-if="fundsLocked" class="lock-indicator">
+              <q-icon name="lock_clock" size="14px" />
+              {{ lockMessage }}
+            </span>
           </div>
           <div v-if="balancestakeselector == 'stake'" class="row unlocked">
             <span v-if="info.accrued_balance > 0"
@@ -85,17 +88,54 @@ export default {
     WalletSettings,
     CopyIcon
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    info: state => state.gateway.wallet.info,
-    is_wallet_open: state =>
-      state.gateway.wallet.info && state.gateway.wallet.info.name
-  }),
   data() {
     return {
       balancestakeselector: "balance"
     };
   },
+  computed: mapState({
+    theme: state => state.gateway.app.config.appearance.theme,
+    info: state => state.gateway.wallet.info,
+    daemon_height: state => state.gateway.daemon.info.height,
+    tx_list: state => state.gateway.wallet.transactions.tx_list,
+    is_wallet_open: state =>
+      state.gateway.wallet.info && state.gateway.wallet.info.name,
+    fundsLocked() {
+      return (
+        this.info.balance > 0 && this.info.unlocked_balance < this.info.balance
+      );
+    },
+    lockMessage() {
+      if (!this.fundsLocked) return "";
+      const height = this.daemon_height || this.info.height;
+      if (!height) return "Unlocking...";
+
+      // Find most recent outgoing/pending TX with < 10 confirmations
+      const outTypes = ["out", "pending", "stake"];
+      const recentLockedTx = this.tx_list
+        .filter(tx => outTypes.includes(tx.type))
+        .filter(tx => tx.height > 0 && height - tx.height < 10)
+        .sort((a, b) => b.height - a.height)[0];
+
+      if (recentLockedTx) {
+        const confirmations = Math.max(0, height - recentLockedTx.height);
+        const blocksLeft = Math.max(0, 10 - confirmations);
+        if (blocksLeft <= 0) return "Unlocking...";
+        const minsLeft = blocksLeft * 2;
+        return `~${blocksLeft} block${
+          blocksLeft === 1 ? "" : "s"
+        } (~${minsLeft} min)`;
+      }
+
+      // Pending TX not yet in a block
+      const pendingTx = this.tx_list.find(
+        tx => tx.type === "pending" || tx.type === "pool"
+      );
+      if (pendingTx) return "Pending confirmation...";
+
+      return "Unlocking...";
+    }
+  }),
   methods: {
     rescanWallet() {
       this.$q
@@ -125,25 +165,44 @@ export default {
 .wallet-info {
   .wallet-header {
     padding: 0.8rem 1.5rem;
+    background: #080c12;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.1);
     .title {
-      font-weight: bold;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.92);
     }
   }
 
   .wallet-content {
     text-align: center;
     padding: 2em;
+    background: linear-gradient(180deg, #080c12 0%, #030508 100%);
 
     .balance {
+      .q-btn-toggle {
+        padding: 2px;
+        border-radius: 4px;
+
+        .q-btn {
+          padding: 1px 8px !important;
+          min-height: 18px !important;
+          font-size: 10px !important;
+        }
+      }
+
       .text {
         font-size: 16px;
+        color: rgba(255, 255, 255, 0.6);
       }
       .value {
         font-size: 35px;
+        font-family: "JetBrains Mono", monospace;
+        color: rgba(255, 255, 255, 0.92);
 
         .q-btn {
           opacity: 0.7;
           transition: opacity 0.2s;
+          color: #00d4ff;
 
           &:hover {
             opacity: 1;
@@ -158,19 +217,59 @@ export default {
 
     .wallet-address {
       margin-top: 12px;
+      padding: 12px;
+      background: rgba(0, 212, 255, 0.05);
+      border: 1px solid rgba(0, 212, 255, 0.1);
+      border-radius: 8px;
+
       .address {
         overflow: hidden;
         text-overflow: ellipsis;
         margin: 4px 0;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.8);
       }
       .q-btn {
         margin-left: 8px;
+        color: #00d4ff;
       }
     }
 
     .unlocked {
       font-size: 14px;
       font-weight: 500;
+      color: rgba(255, 255, 255, 0.6);
+      font-family: "JetBrains Mono", monospace;
+      align-items: center;
+
+      .lock-indicator {
+        margin-left: 10px;
+        padding: 2px 8px;
+        background: rgba(255, 170, 0, 0.12);
+        border: 1px solid rgba(255, 170, 0, 0.3);
+        border-radius: 4px;
+        font-size: 11px;
+        color: #ffaa00;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        animation: lockPulse 2s ease-in-out infinite;
+
+        .q-icon {
+          color: #ffaa00;
+        }
+      }
+    }
+
+    @keyframes lockPulse {
+      0%,
+      100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.6;
+      }
     }
   }
 }

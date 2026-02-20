@@ -28,12 +28,40 @@
 
     <template v-if="secret.mnemonic">
       <div class="seed-box col">
-        <h6 class="q-mb-xs q-mt-lg">{{ $t("strings.seedWords") }}</h6>
+        <div
+          class="seed-warning-banner"
+          style="
+          background: rgba(255, 60, 60, 0.1);
+          border: 2px solid rgba(255, 60, 60, 0.5);
+          border-radius: 8px;
+          padding: 16px;
+          margin-top: 16px;
+          margin-bottom: 12px;
+          text-align: center;
+        "
+        >
+          <div
+            style="font-size: 18px; font-weight: 700; color: #ff4444; margin-bottom: 8px;"
+          >
+            ⚠ WRITE DOWN YOUR SEED WORDS ⚠
+          </div>
+          <div
+            style="font-size: 13px; color: rgba(255,255,255,0.8); line-height: 1.6;"
+          >
+            These 25 words are the ONLY way to recover your wallet if you lose
+            access.<br />
+            <strong style="color: #ff4444;"
+              >If you lose these words, your funds are gone forever. No one can
+              help you.</strong
+            ><br />
+            Write them down on paper and store them somewhere safe. Do NOT
+            screenshot or save digitally.
+          </div>
+        </div>
+
+        <h6 class="q-mb-xs">{{ $t("strings.seedWords") }}</h6>
         <div class="seed q-my-lg">
           {{ secret.mnemonic }}
-        </div>
-        <div class="q-my-md warning">
-          {{ $t("strings.saveSeedWarning") }}
         </div>
         <div>
           <q-btn
@@ -42,6 +70,15 @@
             icon="file_copy"
             label="Copy seed words"
             @click="copyPrivateKey('mnemonic', $event)"
+          />
+        </div>
+
+        <div style="margin-top: 20px;">
+          <q-checkbox
+            v-model="seedSaved"
+            label="I have saved my seed words in a safe place"
+            color="positive"
+            style="color: rgba(255,255,255,0.8);"
           />
         </div>
       </div>
@@ -107,7 +144,12 @@
     <q-btn
       class="q-mt-lg"
       color="primary"
-      :label="$t('buttons.openWallet')"
+      :disable="!seedSaved && !!secret.mnemonic"
+      :label="
+        seedSaved || !secret.mnemonic
+          ? $t('buttons.openWallet')
+          : 'Confirm seed saved to continue'
+      "
       @click="open"
     />
   </q-page>
@@ -117,6 +159,11 @@
 const { clipboard } = require("electron");
 import { mapState } from "vuex";
 export default {
+  data() {
+    return {
+      seedSaved: false
+    };
+  },
   computed: mapState({
     info: state => state.gateway.wallet.info,
     secret: state => state.gateway.wallet.secret,

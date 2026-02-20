@@ -96,10 +96,6 @@ export default {
       return this.wallet_list.filter(w => !w.hardware_wallet);
     },
     actions() {
-      // TODO: Add this in once LOKI has the functionality
-      // <q-item @click.native="restoreViewWallet()">
-      //     <q-item-label label="Restore view-only wallet" />
-      // </q-item>
       const actions = [
         {
           name: this.$t("titles.wallet.createNew"),

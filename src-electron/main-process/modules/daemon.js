@@ -175,7 +175,6 @@ export class Daemon {
         args.push("--add-priority-node", "84.247.143.210:18080");
       }
 
-      // TODO: Check if we need to push this command for staging too
       if (daemon.type === "local_remote" && net_type === "mainnet") {
         args.push(
           "--bootstrap-daemon-address",
@@ -193,6 +192,8 @@ export class Daemon {
         .catch(() => "closed")
         .then(status => {
           if (status === "closed") {
+            // No daemon running, start a new one
+            console.log("[Daemon] Port is closed, starting new daemon...");
             if (process.platform === "win32") {
               // Try .exe first, then without extension
               let xeqd_path = path.join(__ryo_bin, "xeq-d.exe");
@@ -249,7 +250,43 @@ export class Daemon {
               });
             }, 1000);
           } else {
-            reject(new Error(`Local daemon port ${this.port} is in use`));
+            // Port is already in use - try to connect to existing daemon
+            console.log(
+              "[Daemon] Port is already in use, checking for existing daemon..."
+            );
+            this.sendRPC("get_info", {}, { timeout: 5000 })
+              .then(data => {
+                if (!data.hasOwnProperty("error")) {
+                  // Existing daemon is responding, use it
+                  console.log(
+                    "[Daemon] Found existing daemon running on port " +
+                      this.port +
+                      ", connecting to it..."
+                  );
+                  console.log(
+                    "[Daemon] Daemon info:",
+                    JSON.stringify(data.result).substring(0, 200)
+                  );
+                  this.daemonProcess = null; // We didn't start it, so don't track it
+                  // Keep this.local = true so heartbeat works correctly
+                  this.startHeartbeat();
+                  resolve();
+                } else {
+                  // Port is in use but not by a compatible daemon
+                  reject(
+                    new Error(
+                      `Local daemon port ${this.port} is in use by another application`
+                    )
+                  );
+                }
+              })
+              .catch(() => {
+                reject(
+                  new Error(
+                    `Local daemon port ${this.port} is in use but not responding`
+                  )
+                );
+              });
           }
         });
     });

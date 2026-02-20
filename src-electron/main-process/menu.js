@@ -33,7 +33,9 @@ let template = [
       {
         label: "Learn More",
         click() {
-          require("electron").shell.openExternal("https://oxen.io/");
+          require("electron").shell.openExternal(
+            "https://equilibria-network.gitbook.io/docs"
+          );
         }
       }
     ]
@@ -42,7 +44,7 @@ let template = [
 
 if (process.platform === "darwin") {
   template.unshift({
-    label: "Oxen Electron Wallet",
+    label: "Equilibria Wallet",
     submenu: [
       { role: "about" },
       { type: "separator" },

@@ -73,9 +73,9 @@ export class Backend {
     const daemon = {
       type: "remote",
       p2p_bind_ip: "0.0.0.0",
-      p2p_bind_port: 22022,
+      p2p_bind_port: 9230,
       rpc_bind_ip: "127.0.0.1",
-      rpc_bind_port: 22023,
+      rpc_bind_port: 9231,
       zmq_rpc_bind_ip: "127.0.0.1",
       out_peers: -1,
       in_peers: -1,
@@ -87,8 +87,8 @@ export class Backend {
     const daemons = {
       mainnet: {
         ...daemon,
-        remote_host: "imaginary.stream",
-        remote_port: 22023
+        remote_host: "us.equilibriacc.com",
+        remote_port: 9231
       },
       stagenet: {
         ...daemon,
@@ -115,13 +115,11 @@ export class Backend {
         data_dir: this.config_dir,
         wallet_data_dir: defaultWalletDir,
         ws_bind_port: 12313,
-        net_type: "testnet"
+        net_type: "mainnet"
       },
       wallet: {
-        type: "remote",
+        type: "local",
         rpc_bind_port: 22026,
-        remote_host: "127.0.0.1",
-        remote_port: 18084,
         log_level: 0
       }
     };
@@ -136,20 +134,16 @@ export class Backend {
 
     this.remotes = [
       {
-        host: "public-na.optf.ngo",
-        port: "22023"
+        host: "us.equilibriacc.com",
+        port: "9231"
       },
       {
-        host: "explorer.oxen.aussie-pools.com",
-        port: "18081"
+        host: "eu.equilibriacc.com",
+        port: "9231"
       },
       {
-        host: "public-eu.optf.ngo",
-        port: "22023"
-      },
-      {
-        host: "oxen-rpc.caliban.org",
-        port: "22023"
+        host: "asia.equilibriacc.com",
+        port: "9231"
       }
     ];
 

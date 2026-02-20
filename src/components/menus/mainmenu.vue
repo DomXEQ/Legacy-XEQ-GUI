@@ -26,7 +26,6 @@
       </q-menu>
     </q-btn>
     <SettingsModal ref="settingsModal" />
-    <!-- TODO: Move this to it's own component -->
     <q-dialog ref="aboutModal" minimized>
       <div class="about-modal">
         <img class="q-mb-md" src="Equilibria.svg" height="42" />
@@ -117,8 +116,6 @@ export default {
         return;
       }
 
-      // TODO: Remove this in hardfork 16
-      // This is a temporary work around for the issue where wallet rpc hangs after closing a wallet due to long polling still being active
       this.$gateway.confirmClose(
         this.$t("dialog.switchWallet.restartWalletMessage"),
         true
@@ -162,18 +159,28 @@ export default {
 <style lang="scss">
 .about-modal {
   padding: 25px;
-  background-color: white;
-  color: #1f1c47;
+  background: #0c1218;
+  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 12px;
+  text-align: center;
+
+  p {
+    color: rgba(255, 255, 255, 0.6);
+  }
 
   .external-links {
     a {
-      color: #497dc6;
+      color: #00d4ff;
       text-decoration: none;
 
       &:hover,
-      &:active,
-      &:visited {
+      &:active {
         text-decoration: underline;
+      }
+
+      &:visited {
+        color: #00a8cc;
       }
     }
   }

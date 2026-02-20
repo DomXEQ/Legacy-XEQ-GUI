@@ -1,39 +1,65 @@
-// app global css
+// Equilibria Dark Theme Styles
+// --------------------------------------------------
 @import 'quasar.variables'
 @import 'flags'
 
+// Font Definitions
 @font-face {
     font-family: 'RobotoMono-Light';
     src: url(themes/RobotoMono-Light.ttf)
 }
 
+// Base font family - JetBrains Mono throughout
+body, html {
+    font-family: 'JetBrains Mono', 'RobotoMono-Light', monospace;
+    background: $bg-void;
+    color: $text-primary;
+}
+
+// Monospace utility class (same as base now)
+.monospace, .mono {
+    font-family: 'JetBrains Mono', 'RobotoMono-Light', monospace;
+    letter-spacing: -0.02em;
+}
+
+// Selection styling
 ::selection {
-    background: #129fca;
+    background: rgba(0, 212, 255, 0.3);
+    color: white;
 }
 ::-moz-selection {
-    background: #129fca;
+    background: rgba(0, 212, 255, 0.3);
+    color: white;
 }
 
+// Scrollbar styling (dark theme)
 * {
-    scrollbar-track-color: #111;
-    scrollbar-arrow-color: #111;
-    &::-webkit-scrollbar-corner { background-color: #111;}
-    &::-webkit-scrollbar-track-piece { background-color: #111;}
+    scrollbar-track-color: $bg-void;
+    scrollbar-arrow-color: $bg-void;
+    &::-webkit-scrollbar-corner { background-color: $bg-void;}
+    &::-webkit-scrollbar-track-piece { background-color: $bg-void;}
 
-    scrollbar-face-color: #646464;
-    scrollbar-base-color: #646464;
-    scrollbar-3dlight-color: #646464;
-    scrollbar-highlight-color: #646464;
-    scrollbar-shadow-color: #646464;
-    scrollbar-dark-shadow-color: #646464;
+    scrollbar-face-color: $bg-panel;
+    scrollbar-base-color: $bg-panel;
+    scrollbar-3dlight-color: $bg-panel;
+    scrollbar-highlight-color: $bg-panel;
+    scrollbar-shadow-color: $bg-panel;
+    scrollbar-dark-shadow-color: $bg-panel;
     &::-webkit-scrollbar { width: 8px; height: 8px;}
-    &::-webkit-scrollbar-button {  background-color: #646464; height:0; width: 0; }
-    &::-webkit-scrollbar-track {  background-color: #646464;}
-    &::-webkit-scrollbar-thumb { height: 50px; background-color: #646464; border-radius: 3px;}
-    &::-webkit-resizer { background-color: #646464;}
+    &::-webkit-scrollbar-button { background-color: $bg-panel; height:0; width: 0; }
+    &::-webkit-scrollbar-track { background-color: $bg-void;}
+    &::-webkit-scrollbar-thumb {
+        height: 50px;
+        background-color: rgba(0, 212, 255, 0.2);
+        border-radius: 4px;
+        &:hover {
+            background-color: rgba(0, 212, 255, 0.3);
+        }
+    }
+    &::-webkit-resizer { background-color: $bg-panel;}
 }
 
-
+// Non-selectable elements
 h1,h2,h3,h4,h5,h6,
 img,
 .q-list-header,
@@ -51,11 +77,7 @@ footer,
     user-select: none !important;
 }
 
-.monospace {
-    font-family: 'RobotoMono-Light', monospace
-}
-
-
+// Utility classes
 .break-all {
     word-break: break-all
 }
@@ -65,6 +87,13 @@ footer,
     overflow: hidden;
 }
 
+.truncate-item {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+// Form styling
 .q-field {
     margin: 20px 0;
 
@@ -86,7 +115,6 @@ footer,
     text-transform: none;
 }
 
-// At bottom of forms
 .submit-button {
     margin-top: 6px;
 }
@@ -100,15 +128,17 @@ footer,
     text-align: left;
 }
 
+// Main layout - dark backgrounds
 .q-layout, .app-content {
-    background: white;
-    color:$oxen-navy;
+    background: $bg-space;
+    color: $text-primary;
 }
 
+// Header styling
 .q-header {
-    background: #0A0A0A;
+    background: $bg-void;
     box-shadow: none;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid $border-default;
     height: 48px;
 
     &.shift-title {
@@ -118,7 +148,7 @@ footer,
             .q-toolbar-title {
                 font-size: 16px;
                 line-height: 48px;
-                font-weight: 300;
+                font-weight: 500;
             }
         }
     }
@@ -139,7 +169,7 @@ footer,
     }
 
     .q-toolbar-inverted {
-        background: $oxen-navy;
+        background: $bg-panel;
         padding-top: 0;
     }
 
@@ -153,17 +183,16 @@ footer,
 
         .q-tab {
             text-transform: none;
+            color: $text-secondary;
 
-            // &:hover {
-            //     background-color: rgba(12,12,12,0.15)
-            // }
+            &:hover {
+                color: $text-primary;
+            }
 
             .q-icon {
                 font-size: 22px;
             }
-
         }
-
     }
 }
 
@@ -171,19 +200,23 @@ footer,
     min-height: 0 !important;
 }
 
+// Info boxes
 .infoBox {
     height: 75px;
     cursor: default;
     position: relative;
     overflow: hidden;
     margin: 10px 0;
+    background: $bg-card;
+    border: 1px solid $border-subtle;
+    border-radius: 8px;
 
     .infoBoxIcon {
         position: absolute;
         right: 10px;
         top: 10px;
         width: 64px;
-        color: #cecece;
+        color: $text-muted;
 
         svg {
             width: 60px;
@@ -197,22 +230,72 @@ footer,
         .text {
             font-size: 14px;
             margin-top: 8px;
-            color: $oxen-navy;
+            color: $text-secondary;
         }
 
         .value {
             font-size: 24px;
             margin-top: 4px;
-            font-weight: 300;
-            color: $oxen-navy;
+            font-weight: 500;
+            color: $text-primary;
+            font-family: 'JetBrains Mono', monospace;
         }
     }
 }
 
+// Checkbox styling
 .q-checkbox {
-    color: $oxen-navy    
+    color: $text-primary;
+
+    .q-checkbox__inner {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .q-checkbox__inner--falsy .q-checkbox__bg {
+        border-color: rgba(255, 255, 255, 0.45);
+    }
+
+    .q-option-label {
+        color: rgba(255, 255, 255, 0.8);
+    }
 }
 
+// Global input field styling for dark theme
+.q-field__label {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.q-field--focused .q-field__label {
+    color: #00d4ff !important;
+}
+
+.q-field__native,
+.q-field__input {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.q-field__control::before {
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.q-field--focused .q-field__control::after {
+    border-color: #00d4ff !important;
+}
+
+// Radio button styling for dark theme
+.q-radio {
+    color: rgba(255, 255, 255, 0.8);
+
+    .q-radio__inner {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .q-radio__inner--falsy .q-radio__bg {
+        border-color: rgba(255, 255, 255, 0.45);
+    }
+}
+
+// Loading overlay
 .q-loading + .modal {
     z-index: 9999 !important;
 }
@@ -223,10 +306,11 @@ footer,
     word-break: break-word;
 }
 
+// Footer status bar
 .q-footer.status-footer {
-    background: $oxen-navy;
-    color: rgba(255, 255, 255, 0.51);
-    border-top: 1px solid #333;
+    background: $bg-void;
+    color: $text-secondary;
+    border-top: 1px solid $border-default;
     padding-top: 2px;
     box-shadow: none;
     font-size: 12px;
@@ -242,7 +326,7 @@ footer,
             }
 
             .status-text {
-                font-weight: bold;
+                font-weight: 600;
             }
 
             .ready {
@@ -250,7 +334,7 @@ footer,
             }
 
             .scanning, .syncing {
-                color: goldenrod;
+                color: $warning;
             }
 
             .updateRequired {
@@ -264,18 +348,15 @@ footer,
     }
 
     .status-bars {
-
         div {
             height: 3px;
             position: absolute;
             bottom: 0;
             left: 0;
-            -webkit-transition: width 0.5s ease-out;
             transition: width 0.5s ease-out;
         }
 
         div:first-child {
-            // TODO: should first and last child be different, where even is this?
             background-color: $positive;
         }
 
@@ -286,32 +367,30 @@ footer,
 
     .status-bars.syncing, .status-bars.scanning {
         div:first-child {
-            background-color: goldenrod;
+            background-color: $warning;
         }
 
         div:last-child {
-            background-color:goldenrod;
+            background-color: $warning;
         }
     }
 
     .status-bars.updateRequired {
         div:first-child {
-            color: $negative;
             background-color: $negative;
         }
 
         div:last-child {
-            color: $negative;
             background-color: $negative;
         }
     }
-
 }
 
+// Transaction list
 .tx-list {
-
     .meta {
-        text-align:right;
+        text-align: right;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     .q-item.tx-in,
@@ -320,69 +399,80 @@ footer,
     .q-item.tx-snode,
     .q-item.tx-gov {
         .amount span {
-            color: $oxen-navy;
+            color: $positive;
+            font-family: 'JetBrains Mono', monospace;
             &:before {
                 content: "+";
-                color: $oxen-navy;
+                color: $positive;
             }
         }
     }
 
     .q-item.tx-stake {
         .amount span {
-            color: goldenrod;
+            color: $warning;
+            font-family: 'JetBrains Mono', monospace;
         }
     }
 
     .q-item.tx-out,
     .q-item.tx-pending {
         .amount span {
-            // color: white;
+            color: $text-primary;
+            font-family: 'JetBrains Mono', monospace;
             &:before {
                 content: "-";
                 font-weight: bold;
-                // color: white;
             }
         }
     }
 
     .q-item.tx-failed {
         .amount span {
-            color: orangered;
+            color: $negative;
+            font-family: 'JetBrains Mono', monospace;
         }
+    }
+
+    .transaction .main {
+        border-left: 1px solid $border-default;
     }
 }
 
+// List items dark theme
 .q-list-dark .q-item,
 .q-item-dark .q-item,
 .q-list-header {
-    color: #cecece;
+    color: $text-primary;
 }
 
 .q-stepper-tab.step-waiting,
 .q-stepper-step-content{
-    color: #cecece;
+    color: $text-secondary;
 }
 
+// Menu styling
 .q-menu {
-    background: white;
-    color: $oxen-navy !important;
+    background: $bg-card;
+    color: $text-primary !important;
+    border: 1px solid $border-default;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 
     * {
-        color: $oxen-navy;
+        color: $text-primary;
     }
 
     .q-list-separator > .q-item-division + .q-item-division, .q-item-division + .q-separator {
-        border-top: 1px solid #333;
+        border-top: 1px solid $border-subtle;
     }
 }
 
 .menu-list {
-
-    background: white;
+    background: $bg-card;
 
     .q-item * {
-        color: $oxen-navy;
+        color: $text-primary;
     }
 }
 
@@ -391,11 +481,14 @@ footer,
   max-height: 300px;
 }
 
+// Confirm transaction dialog
 .confirm-tx-card {
   width: 450px;
-  max-width: 450x;
-
-  color: $oxen-navy !important;
+  max-width: 450px;
+  background: $bg-card;
+  color: $text-primary !important;
+  border: 1px solid $border-default;
+  border-radius: 12px;
 
   .confirm-list {
     .q-item {
@@ -408,234 +501,251 @@ footer,
   }
 
   .label {
-    color: $oxen-purple;
+    color: $text-accent;
     padding-right: 6px;
   }
   .address-value {
     word-break: break-word;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   .confirm-send-btn {
-    color: white;
+    color: $bg-void;
     background: $primary;
+    font-weight: 600;
   }
 }
 
-
 .header-popover {
-    background: white;
+    background: $bg-card;
     max-width: 250px !important;
+    border: 1px solid $border-default;
 }
 
+// Modal styling
 .modal.minimized {
     .q-input {
         .q-input-target {
-            color: #cecece;
+            color: $text-primary;
         }
         &.q-if:hover:before {
-            color: #cecece;
+            color: $text-primary;
         }
     }
 }
 
 .modal {
-    color: #cecece;
+    color: $text-primary;
 
     .modal-header {
         margin-top: 6px;
         margin-left: 24px;
         text-align: left;
         font-size: 24px;
-        font-weight: bold;
+        font-weight: 600;
     }
 
     .q-header {
-
         .q-toolbar {
             &>* {
-                color: #cecece;
+                color: $text-primary;
             }
         }
     }
-
 }
 
 .q-toolbar {
-    background-color: $oxen-navy;
+    background-color: $bg-panel;
 }
 
 .header {
-    color: $oxen-navy;
+    color: $text-primary;
 }
 
 .detail-page {
-    color: $oxen-navy;
+    color: $text-primary;
 }
 
 .q-radio {
-    color: $oxen-navy;
+    color: $text-primary;
     svg {
-        color: $oxen-navy;
+        color: $primary;
     }
 }
 
+// QR code modal
 .qr-code-modal {
-  padding: "25px";
-  color: white;
+  padding: 25px;
+  color: $text-primary;
 
   .qr-code-card {
     background-color: white;
+    padding: 16px;
+    border-radius: 8px;
   }
 }
 
+// Accent color classes
 .oxen-light-teal {
-    background: $oxen-light-teal;
-    color: white;
+    background: $secondary;
+    color: $text-primary;
 }
 
 .oxen-navy {
-    background: $oxen-navy;
-    color: white;
+    background: $bg-panel;
+    color: $text-primary;
 }
 
 .oxen-teal {
-    background: $oxen-teal;
-    color: white;
+    background: $primary;
+    color: $bg-void;
 }
 
+// Startup icons
 .startup-icons {
     .solid {
-        color:$oxen-teal;
+        color: $primary;
         g,path {
-            fill: $oxen-teal;
+            fill: $primary;
         }
     }
 }
 
+// Separator
 .hr-separator {
     height: 2px;
-    background: $secondary;
-    opacity: 0.4;
+    background: $border-default;
+    opacity: 0.5;
 }
 
+// Navigation styling
 .navigation {
     .q-btn {
-        background: $oxen-navy;
-        color: white;
-        
+        background: $bg-card;
+        color: $text-primary;
+        border: 1px solid $border-subtle;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: $bg-hover;
+            border-color: $border-default;
+        }
+
         .q-icon {
-            color: $oxen-teal;
+            color: $primary;
         }
     }
 
     .router-link-exact-active > .q-btn {
-        color: $oxen-navy
-        background: $oxen-teal;
+        color: $bg-void;
+        background: $primary;
+        border-color: $primary;
 
         .q-icon {
-            color: $oxen-navy;
+            color: $bg-void;
         }
     }
-
 }
 
-.truncate-item {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+// Wallet list
 .wallet-list {
     .q-item-label {
-        color: white;
+        color: $text-primary;
     }
 
     .q-item {
-        background: $oxen-navy;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
-        transition: box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        background: $bg-card;
+        border: 1px solid $border-subtle;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        transition: all 0.2s ease;
+
         .wallet-icon {
-            color: $oxen-teal;
+            color: $primary;
             g,path {
-                fill: $oxen-teal;
+                fill: $primary;
             }
         }
     }
 
     .q-item:hover, .q-item.selected {
-        background: $oxen-purple !important;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+        background: $bg-hover !important;
+        border-color: $primary;
+        box-shadow: 0 4px 16px rgba(0, 212, 255, 0.2);
 
         .wallet-icon {
-            color: $oxen-teal;
+            color: $primary;
             g,path {
-                fill: $oxen-teal;
+                fill: $primary;
             }
         }
 
         .q-icon {
-            color: white;
+            color: $primary;
         }
     }
 
     .q-item:active {
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
 }
 
 .wallet-settings {
   .q-btn {
-    color: $oxen-navy;
+    color: $text-primary;
   }
 }
 
+// Receive page
 .receive {
-
     .list-header {
-        color: $oxen-navy;
+        color: $text-primary;
     }
 
     .q-separator-component {
-        background-color: white;
-        opacity: 0.4;
+        background-color: $border-subtle;
+        opacity: 0.5;
     }
 
     .primary-address {
-        background: $oxen-teal !important;
-        border: none !important;
+        background: linear-gradient(135deg, rgba(0, 212, 255, 0.15) 0%, rgba(0, 212, 255, 0.05) 100%) !important;
+        border: 1px solid $primary !important;
+        border-radius: 8px;
 
         .q-item, .q-item-side {
-            color: white;
+            color: $text-primary;
 
             .text-caption {
-                color: white;
+                color: $text-secondary;
+                font-family: 'JetBrains Mono', monospace;
             }
         }
 
         .q-btn {
-            color: white;
+            color: $primary;
         }
     }
 
     .primary-address:hover {
-        background: #0ca69b !important;
+        background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 212, 255, 0.1) 100%) !important;
     }
-
 }
 
+// Oxen list items
 .oxen-list {
     .oxen-list-item {
-        background: white;
-        -webkit-transition: background-color 0.2s ease-in;
-        transition: background-color 0.2s ease-in;
+        background: $bg-card;
+        transition: all 0.2s ease;
 
         font-size: 16px;
-        color: $oxen-navy;
+        color: $text-primary;
         padding-top: 6px;
         padding-bottom: 6px;
 
         margin: 0 16px;
-        border: 1px solid $oxen-navy;
-        border-radius: 4px;
+        border: 1px solid $border-subtle;
+        border-radius: 8px;
 
         + .oxen-list-item {
             margin-top: 10px;
@@ -643,84 +753,85 @@ footer,
     }
 
     .text-caption {
-        color: $oxen-navy;
+        color: $text-secondary;
     }
 
     .oxen-list-item:hover {
-        background: $off-grey;
+        background: $bg-hover;
+        border-color: $border-default;
         cursor: pointer;
-
     }
-
 }
 
 .record-type-title {
-  font-weight: bold;
+  font-weight: 600;
   margin-bottom: 40px;
   padding-bottom: 40px;
-  color: $oxen-navy;
+  color: $text-primary;
 }
 
 .records-group {
   padding-bottom: 40px;
 }
 
+// Service node list
 .service-node-list {
     .q-item {
         cursor: pointer;
-        color: $oxen-navy;
-        background: white;
-        -webkit-transition: background-color 0.2s ease-in;
-        transition: background-color 0.2s ease-in;
+        color: $text-primary;
+        background: $bg-card;
+        transition: all 0.2s ease;
 
-        border: 1px solid $oxen-navy;
-        border-radius: 4px;
+        border: 1px solid $border-subtle;
+        border-radius: 8px;
 
         + .q-item {
             margin-top: 10px;
         }
 
         .contrib-amounts {
-            color: $oxen-navy;
+            color: $text-secondary;
+            font-family: 'JetBrains Mono', monospace;
         }
     }
-    
+
     .q-item-label {
-        color: $oxen-navy;
+        color: $text-primary;
     }
 
     .fee {
-        color: $oxen-navy;
+        color: $text-secondary;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     .q-item:hover {
-        background: $off-grey;
+        background: $bg-hover;
+        border-color: $border-default;
     }
-
 }
 
 .lokinet-expiration {
   width: 180px;
 }
 
+// ONS record list
 .ons-record-list {
   .q-item {
     cursor: pointer;
-    color: $oxen-navy;
-    -webkit-transition: background-color 0.2s ease-in;
-    transition: background-color 0.2s ease-in;
+    color: $text-primary;
+    background: $bg-card;
+    transition: all 0.2s ease;
 
-    border: 1px solid $oxen-navy;
-    border-radius: 4px;
+    border: 1px solid $border-subtle;
+    border-radius: 8px;
 
     .height {
-      color: $oxen-navy;
+      color: $text-secondary;
+      font-family: 'JetBrains Mono', monospace;
     }
 
-    // we don't want to select button text (also a span) as well
-    // this is the height text
     div > span {
-      color: #1f1c47;
+      color: $text-primary;
     }
 
     + .q-item {
@@ -729,95 +840,107 @@ footer,
   }
 
   .q-item:hover {
-    background: $off-grey;
+    background: $bg-hover;
+    border-color: $border-default;
   }
 }
+
 .update-renew-buttons {
   .q-btn:not(:first-child) {
     margin-left: 8px;
   }
 }
 
-.tx-list {
-    .transaction .main {
-            border-left: 1px solid #252525;
-    }
-}
-
+// Tab description
 .tab-desc {
-    color: $oxen-navy;
+    color: $text-secondary;
     font-style: normal;
     b {
-        color: $oxen-teal;
+        color: $primary;
         font-style: italic;
     }
 }
 
+// Oxen field (form inputs)
 .oxen-field {
     .content {
-        border: 1px solid #484848;
-        background: white;
-        -webkit-transition: background-color 0.2s ease-in, border-color 0.2s ease-in;
-        transition: background-color 0.2s ease-in, border-color 0.2s ease-in;
+        border: 1px solid $border-default;
+        background: $bg-input;
+        border-radius: 8px;
+        transition: all 0.2s ease;
     }
 
     &:not(.disable):not(.disable-hover) {
         .content:hover {
-            background: white;
+            background: $bg-card;
+            border-color: $border-strong;
+        }
+
+        .content:focus-within {
+            border-color: $primary;
+            box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.1);
         }
     }
 
     &.disable {
         .content {
-            border-color: #404040 !important;
+            border-color: $border-subtle !important;
+            opacity: 0.5;
         }
     }
 
     .content.error {
-        border-color: red;
+        border-color: $negative;
     }
 
     .label {
-        color: $oxen-navy;
+        color: $text-secondary;
+        font-weight: 500;
 
         .optional {
-            color: #7C7C7C;
+            color: $text-muted;
         }
     }
 }
 
+// Welcome page
 .welcome {
     .q-footer {
-        background: $secondary
+        background: $bg-panel;
     }
 }
 
 .welcome-container {
-    color: $oxen-navy;
+    color: $text-primary;
 }
 
+// Address book
 .address-book, .address-header {
     .q-item-label, .header {
-        color: white;
+        color: $text-primary;
     }
 }
 
+// Prove transaction
 .prove-transaction {
     .signature {
-        background: rgba(0,0,0,0.5);
-        border: #0a0a0a 1px solid;
-        border-radius: 2px;
-        color: #b7b7b7;
+        background: $bg-card;
+        border: 1px solid $border-default;
+        border-radius: 8px;
+        color: $text-primary;
+        font-family: 'JetBrains Mono', monospace;
+        padding: 12px;
     }
 }
 
 .signature-dialog {
-    color: $oxen-navy;    
+    color: $text-primary;
 }
 
+// Check transaction
 .check-transaction {
     .good {
-        color: #43bd43;
+        color: $positive;
     }
 
     .bad {
@@ -827,27 +950,31 @@ footer,
 
 .check-transaction, .prove-transaction {
     .title {
-        color: #b7b7b7;
+        color: $text-secondary;
         font-size: 14px;
+        font-weight: 500;
     }
 }
 
+// Service node details
 .serviceNodeDetails {
     .address {
-        color: white;
+        color: $text-primary;
+        font-family: 'JetBrains Mono', monospace;
     }
     .name {
-        color: #979797;
+        color: $text-secondary;
     }
 }
 
 .non-selectable {
-    color: #979797;
+    color: $text-muted;
 }
 
+// Wallet creation page
 .created {
-    color: $oxen-navy;
-    
+    color: $text-primary;
+
   .wallet h6 {
     text-align: center;
   }
@@ -855,13 +982,15 @@ footer,
   .address {
     text-align: center;
     word-break: break-all;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   .seed-box {
-    border: 1px solid white;
-    border-radius: 3px;
+    border: 1px solid $border-default;
+    border-radius: 12px;
     margin: 16px;
     padding: 16px;
+    background: $bg-card;
 
     div,
     h6 {
@@ -869,21 +998,194 @@ footer,
     }
 
     .seed {
-      font-size: 24px;
-      font-weight: 600;
+      font-size: 20px;
+      font-weight: 500;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1.6;
     }
 
     .warning {
-      color: goldenrod;
+      color: $warning;
     }
   }
+
   h6 {
     font-size: 18px;
     margin: 8px 0;
-    font-weight: 450;
+    font-weight: 500;
   }
+
   .advanced-options-label {
     padding-left: 0;
     padding-right: 0;
   }
+}
+
+// Input text colors
+.q-input input, .q-input textarea {
+    color: $text-primary !important;
+
+    &::placeholder {
+        color: $text-muted !important;
+    }
+}
+
+// Select dropdown
+.q-select {
+    color: $text-primary;
+
+    .q-field__native {
+        color: $text-primary;
+    }
+}
+
+// Dialog styling
+.q-dialog__inner > div {
+    background: $bg-card;
+    color: $text-primary;
+    border: 1px solid $border-default;
+    border-radius: 12px;
+}
+
+// Card styling
+.q-card {
+    background: $bg-card;
+    color: $text-primary;
+    border-radius: 12px;
+}
+
+// Button refinements
+.q-btn.q-btn--standard {
+    &.bg-primary {
+        color: $bg-void;
+        font-weight: 600;
+    }
+}
+
+// Notification styling
+.q-notification {
+    background: $bg-card;
+    border: 1px solid $border-default;
+
+    &.bg-positive {
+        background: rgba(0, 255, 136, 0.1);
+        border-color: $positive;
+    }
+
+    &.bg-negative {
+        background: rgba(255, 71, 87, 0.1);
+        border-color: $negative;
+    }
+}
+
+// Toolbar title background fix
+.q-toolbar-title {
+    background: $bg-void !important;
+}
+
+// Button toggle group styling (sub-navigation tabs)
+.q-btn-toggle {
+    background: $bg-card;
+    border: 1px solid $border-default;
+    border-radius: 4px;
+    padding: 2px;
+
+    .q-btn {
+        border-radius: 3px !important;
+        margin: 0;
+        padding: 2px 10px;
+        min-height: 22px;
+        font-size: 11px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+
+        // Inactive state
+        &:not(.bg-primary) {
+            background: transparent !important;
+            color: $text-secondary !important;
+
+            &:hover {
+                background: $bg-hover !important;
+                color: $text-primary !important;
+            }
+        }
+
+        // Active state (cyan highlight)
+        &.bg-primary, &.text-primary {
+            background: $primary !important;
+            color: $bg-void !important;
+            font-weight: 600;
+        }
+
+        // Remove default Quasar separator styling
+        &:before {
+            display: none !important;
+        }
+    }
+}
+
+// Table styling (q-table)
+.q-table {
+    background: transparent;
+    color: $text-primary;
+
+    // Header
+    thead tr th {
+        background: $bg-panel;
+        color: $text-secondary;
+        font-weight: 600;
+        border-bottom: 1px solid $border-default;
+    }
+
+    // Body rows
+    tbody tr {
+        background: $bg-card;
+
+        &:hover {
+            background: $bg-hover;
+        }
+
+        td {
+            color: $text-primary;
+            border-bottom: 1px solid $border-subtle;
+        }
+    }
+
+    // Pagination and bottom controls
+    .q-table__bottom {
+        background: $bg-panel;
+        color: $text-secondary;
+        border-top: 1px solid $border-subtle;
+
+        .q-table__control {
+            color: $text-secondary;
+        }
+
+        .q-table__separator {
+            color: $text-muted;
+        }
+    }
+
+    // Selection/input in pagination
+    .q-field__native, .q-field__input {
+        color: $text-primary !important;
+    }
+
+    // Sort icons
+    .q-table__sort-icon {
+        color: $text-muted;
+    }
+
+    // Loading overlay
+    .q-table__middle {
+        background: $bg-card;
+    }
+}
+
+// Table card wrapper
+.q-table__card {
+    background: $bg-card;
+    color: $text-primary;
+    border: 1px solid $border-subtle;
+    border-radius: 12px;
 }

@@ -3,7 +3,11 @@ export default {
     // Returns the atomic, unfilled, reserved contributions for the given wallet
     getUnfilledReservedContribution(node, addr) {
       for (const contributor of node.contributors) {
-        if (contributor.address === addr && contributor.amount === 0 && contributor.reserved > 0) {
+        if (
+          contributor.address === addr &&
+          contributor.amount === 0 &&
+          contributor.reserved > 0
+        ) {
           return contributor.reserved;
         }
       }
@@ -16,22 +20,30 @@ export default {
 
       const MAX_NUMBER_OF_CONTRIBUTORS = 10;
       // If we have a reserved spot then that is our minimum:
-      let minContributionAtomicUnits = this.getUnfilledReservedContribution(node, myaddr);
+      let minContributionAtomicUnits = this.getUnfilledReservedContribution(
+        node,
+        myaddr
+      );
       // Otherwise we can contribute our fair share of whatever amount is left (i.e. REMAINING/N
       // when there are N available spots).
-      if (minContributionAtomicUnits === 0 && node.contributors.length < MAX_NUMBER_OF_CONTRIBUTORS) {
+      if (
+        minContributionAtomicUnits === 0 &&
+        node.contributors.length < MAX_NUMBER_OF_CONTRIBUTORS
+      ) {
         const openContributionRemaining = this.openForContribution(node);
 
         let contributors_length = 0;
         for (const contributor of node.contributors) {
-          contributors_length = contributors_length + contributor.locked_contributions.length;
+          contributors_length =
+            contributors_length + contributor.locked_contributions.length;
         }
 
-        minContributionAtomicUnits = openContributionRemaining /
+        minContributionAtomicUnits =
+          openContributionRemaining /
           (MAX_NUMBER_OF_CONTRIBUTORS - contributors_length);
       }
 
-      const minContributionOxen = minContributionAtomicUnits / 1e9;
+      const minContributionOxen = minContributionAtomicUnits / 1e4;
       // ceiling to 4 decimal places
       return minContributionOxen.toFixed(4);
     },
@@ -41,12 +53,15 @@ export default {
           ? node.staking_requirement - node.total_reserved
           : 0;
       if (addr) {
-        openContributionRemaining += this.getUnfilledReservedContribution(node, addr);
+        openContributionRemaining += this.getUnfilledReservedContribution(
+          node,
+          addr
+        );
       }
       return openContributionRemaining;
     },
     openForContributionOxen(node, addr = null) {
-      return (this.openForContribution(node, addr) / 1e9).toFixed(4);
+      return (this.openForContribution(node, addr) / 1e4).toFixed(4);
     }
   }
 };

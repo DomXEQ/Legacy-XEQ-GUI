@@ -60,8 +60,9 @@ export default {
 .oxen-field {
   .label {
     margin: 6px 0;
-    font-weight: bold;
+    font-weight: 500;
     font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
 
     // Disable text selection
     -webkit-user-select: none;
@@ -71,11 +72,12 @@ export default {
     .optional {
       font-weight: 400;
       margin-left: 4px;
+      color: rgba(255, 255, 255, 0.35);
     }
   }
   .content {
-    border-radius: 3px;
-    padding: 6px 8px;
+    border-radius: 8px;
+    padding: 6px 12px;
     min-height: 46px;
 
     > * {
@@ -92,14 +94,18 @@ export default {
       margin: 0;
 
       * {
-        // Oxen navy, can't use vars here :(
-        color: #1f1c47;
+        color: rgba(255, 255, 255, 0.92);
+      }
+
+      input::placeholder,
+      textarea::placeholder {
+        color: rgba(255, 255, 255, 0.35) !important;
       }
     }
 
     .q-select {
       .row {
-        color: red;
+        color: rgba(255, 255, 255, 0.92);
       }
     }
 
@@ -109,9 +115,16 @@ export default {
     }
 
     .q-btn {
-      padding: 4px 8px;
+      padding: 4px 12px;
       font-size: 12px !important;
+      border-radius: 6px;
     }
+  }
+
+  .error-label {
+    color: #ff4757;
+    font-size: 11px;
+    margin-top: 4px;
   }
 }
 </style>

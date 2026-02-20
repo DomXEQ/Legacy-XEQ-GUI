@@ -41,7 +41,7 @@ export default {
     unlocked_balance: state => state.gateway.wallet.info.unlocked_balance,
     disable_submit_button() {
       const minBalance = this.updating ? 0.05 : 7.1;
-      return this.unlocked_balance < minBalance * 1e9;
+      return this.unlocked_balance < minBalance * 1e4;
     },
     submit_label() {
       let label = "buttons.purchase";

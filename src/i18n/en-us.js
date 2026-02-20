@@ -1,7 +1,7 @@
 export default {
   buttons: {
     // All button text is uppercased in the gui
-    advanced: "ADVANCED",
+    advanced: "SWAP - TX PROOF",
     all: "ALL",
     back: "BACK",
     browse: "BROWSE",
@@ -13,7 +13,7 @@ export default {
     contacts: "CONTACTS",
     copyAddress: "COPY ADDRESS",
     copyData: "COPY DATA",
-    copySignature: "COPY SIGNATURE",
+    copySignature: "COPY PROOF",
     createWallet: "CREATE WALLET",
     decrypt: "DECRYPT",
     delete: "DELETE",
@@ -317,7 +317,8 @@ export default {
     showPrivateKeys: "Show Private Keys",
     showQRCode: "Show QR Code",
     switchWallet: "Switch Wallet",
-    viewOnExplorer: "View on explorer"
+    viewOnExplorer: "View on explorer",
+    refreshConnection: "Refresh RPC Connection"
   },
   notification: {
     positive: {
@@ -345,7 +346,7 @@ export default {
       sendSuccess: "Transaction successfully sent",
       serviceNodeInfoFilled: "Service node key and min amount filled",
       sessionIdCopied: "Session ID copied to clipboard",
-      signatureCopied: "Signature copied to clipboard",
+      signatureCopied: "Transaction proof copied to clipboard",
       signatureVerified: "Signature verified",
       stakeSuccess: "Successfully staked",
       transactionNotesSaved: "Transaction notes saved",
@@ -544,7 +545,7 @@ export default {
     },
 
     proveTransactionDescription:
-      "Generate a proof of your incoming/outgoing payment by supplying the transaction ID, the recipient address and an optional message.\nFor the case of outgoing payments, you can get a 'Spend Proof' that proves the authorship of a transaction. In this case, you don't need to specify the recipient address.",
+      "Generate a transaction proof to submit on the swap portal. Paste your Transaction ID and the address you sent to below, then click Generate.",
     readingWalletList: "Reading wallet list",
     recentIncomingTransactionsToAddress:
       "Recent incoming transactions to this address",
@@ -623,11 +624,12 @@ export default {
     website: "website"
   },
   titles: {
+    transactionSent: "Transaction Sent",
     addressBook: "Address book",
     addressDetails: "Address details",
     advanced: {
       checkTransaction: "CHECK TRANSACTION",
-      prove: "PROVE",
+      prove: "PROOF",
       signAndVerify: "SIGN/VERIFY",
       sign: "Sign",
       verify: "Verify"

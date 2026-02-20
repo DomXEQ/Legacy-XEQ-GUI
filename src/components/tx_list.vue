@@ -28,7 +28,20 @@
               <q-item-label class="amount">
                 <FormatOxen :amount="tx.amount || 0" />
               </q-item-label>
-              <q-item-label caption>{{ tx.txid }}</q-item-label>
+              <q-item-label caption class="txid-row">
+                <span class="txid-text">{{ tx.txid }}</span>
+                <q-btn
+                  flat
+                  dense
+                  round
+                  size="xs"
+                  icon="content_copy"
+                  class="copy-txid-btn"
+                  @click.stop="copyTxId(tx.txid)"
+                >
+                  <q-tooltip>Copy Transaction ID</q-tooltip>
+                </q-btn>
+              </q-item-label>
             </q-item-label>
             <q-item-section class="meta">
               <q-item-label>
@@ -250,7 +263,7 @@ export default {
       // id, address, notes, amount, recipient name
       const fields = [tx.txid, tx.note];
 
-      const formattedAmount = tx.amount / 1e9;
+      const formattedAmount = tx.amount / 1e4;
       fields.push(String(formattedAmount));
 
       // Get all addresses and names and add them on
@@ -340,13 +353,62 @@ export default {
         overflow: hidden;
         text-overflow: ellipsis;
       }
+
+      .q-item-label[caption] {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.35);
+      }
+
+      .txid-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        .txid-text {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .copy-txid-btn {
+          opacity: 0.4;
+          min-height: 20px;
+          min-width: 20px;
+          font-size: 10px;
+          transition: opacity 0.2s;
+
+          &:hover {
+            opacity: 1;
+            color: #00d4ff;
+          }
+        }
+      }
     }
 
     .type {
       min-width: 100px;
       max-width: 100px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.6);
       div {
         margin-right: 8px;
+      }
+    }
+
+    .amount {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+
+      .q-item-label[caption] {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.35);
       }
     }
   }

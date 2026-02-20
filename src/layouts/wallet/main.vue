@@ -2,7 +2,7 @@
   <q-layout view="hHh Lpr lFf">
     <q-header class="shift-title">
       <MainMenu />
-      <q-toolbar-title style="background: white;">
+      <q-toolbar-title>
         <div class="flex items-center justify-center" style="margin:8px">
           <img src="Equilibria.svg" height="32" />
         </div>
@@ -53,6 +53,7 @@
               align="between"
             />
           </router-link>
+          <!-- ONS (Equilibria Name Service) hidden - not applicable to XEQ
           <router-link to="/wallet/ons">
             <q-btn
               class="large-btn"
@@ -62,12 +63,13 @@
               align="between"
             />
           </router-link>
+          -->
           <router-link to="/wallet/advanced">
             <q-btn
               class="large-btn"
               :label="$t('buttons.advanced')"
               size="md"
-              icon-right="tune"
+              icon-right="verified_user"
               align="between"
             />
           </router-link>

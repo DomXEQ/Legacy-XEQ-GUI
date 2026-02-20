@@ -1,37 +1,46 @@
-// Copied from themes/common.variables.styl
-// App Shared Variables
+// Equilibria Dark Theme Variables
 // --------------------------------------------------
-// To customize the look and feel of this app, you can override
-// the Stylus variables found in Quasar"s source Stylus files. Setting
-// variables before Quasar"s Stylus will use these variables rather than
-// Quasar"s default Stylus variable values. Stylus variables specific
-// to the themes belong in either the variables.ios.styl or variables.mat.styl files.
+// Space-themed dark palette with electric cyan accent
 
-// Check documentation for full list of Quasar variables
+// Primary Colors
+$primary   = #00d4ff  // Electric cyan - main accent
+$secondary = #0a3d4d  // Muted cyan for secondary elements
+$accent    = #00d4ff  // Same as primary for consistency
 
+// Status Colors
+$positive  = #00ff88  // Bright green for success
+$negative  = #ff4757  // Red for errors/danger
+$warning   = #ffaa00  // Orange/amber for warnings
+$info      = #00d4ff  // Cyan for info
 
-// App Shared Color Variables
-// --------------------------------------------------
-// It"s highly recommended to change the default colors
-// to match your app"s branding.
+$neutral   = #1a2029  // Dark neutral
 
-$primary   = $oxen-teal
-$secondary = $oxen-light-teal
-$accent  = $oxen-navy
+// Background Hierarchy (darkest to lightest)
+$bg-void   = #000000  // Deepest black - main background
+$bg-space  = #030508  // Space black - body background
+$bg-panel  = #080c12  // Panel background
+$bg-card   = #0c1218  // Card/elevated surfaces
+$bg-hover  = #101820  // Hover state
+$bg-input  = #0a0e14  // Input fields
 
-$neutral   = #E0E1E2
-$positive  = #21BA45
-$negative  = #DB2828
-$info      = #31CCEC
-$warning   = #F2C037
+// Border Colors
+$border-subtle = rgba(0, 212, 255, 0.1)   // Subtle cyan border
+$border-default = rgba(0, 212, 255, 0.2)  // Default border
+$border-strong = rgba(0, 212, 255, 0.3)   // Strong border
 
-$loki-green = linear-gradient(180deg, #419B41 0%, #43BD43 100%)
+// Text Colors (white with opacity)
+$text-primary   = rgba(255, 255, 255, 0.92)  // Primary text
+$text-secondary = rgba(255, 255, 255, 0.60)  // Secondary text
+$text-muted     = rgba(200, 205, 210, 0.65)  // Muted/placeholder text - white-grey
+$text-accent    = #00d4ff                     // Accent colored text
 
-$oxen-navy = #000000;
-$oxen-teal = #129fca;
-$oxen-light-teal = #DBF7F5;
-$oxen-purple = #000000;
+// Legacy variable mappings (for compatibility)
+$oxen-navy = $bg-panel
+$oxen-teal = $primary
+$oxen-light-teal = $secondary
+$oxen-purple = $bg-hover
 
-$off-grey = #E8E8E8;
+$off-grey = $bg-hover
 
-$loki-black-60 = #313131;
+$loki-green = $positive
+$loki-black-60 = $bg-panel

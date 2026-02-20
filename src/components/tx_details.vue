@@ -8,6 +8,14 @@
             {{ $t("titles.transactionDetails") }}
           </q-toolbar-title>
           <q-btn
+            v-if="tx.type === 'out' || tx.type === 'pending'"
+            color="positive"
+            class="q-mr-sm"
+            label="GENERATE PROOF"
+            icon="verified_user"
+            @click="generateProof"
+          />
+          <q-btn
             flat
             class="q-mr-sm"
             :label="$t('buttons.showTxDetails')"
@@ -118,6 +126,16 @@
 
           <h6 class="q-mt-xs q-mb-none text-weight-light">
             {{ $t("strings.transactionID") }}
+            <q-btn
+              flat
+              dense
+              size="sm"
+              icon="content_copy"
+              class="q-ml-sm"
+              @click="copyTxId"
+            >
+              <q-tooltip>Copy Transaction ID</q-tooltip>
+            </q-btn>
           </h6>
           <p class="monospace break-all">{{ tx.txid }}</p>
 
@@ -358,6 +376,24 @@ export default {
         type: "positive",
         timeout: 1000,
         message: this.$t("notification.positive.addressCopied")
+      });
+    },
+    copyTxId() {
+      clipboard.writeText(this.tx.txid);
+      this.$q.notify({
+        type: "positive",
+        timeout: 1000,
+        message: this.$t("notification.positive.copied", {
+          item: "Transaction ID"
+        })
+      });
+    },
+    generateProof() {
+      const txid = this.tx.txid;
+      this.isVisible = false;
+      this.$router.push({
+        path: "/wallet/advanced",
+        query: { txid }
       });
     }
   }

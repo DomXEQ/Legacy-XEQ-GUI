@@ -168,10 +168,10 @@ module.exports = function() {
         // https://www.electron.build/configuration/configuration
 
         appId: "com.equilibria.electron-wallet",
-        productName: "Equilibria Electron Wallet",
+        productName: "Legacy XEQ GUI",
         copyright: "Copyright © 2025 Equilibria",
         afterSign: "build/notarize.js",
-        artifactName: "equilibria-electron-wallet-${version}-${os}.${ext}",
+        artifactName: "Legacy-XEQ-GUI-${version}-${os}.${ext}",
         publish: "github",
 
         win: {
@@ -194,11 +194,11 @@ module.exports = function() {
           allowToChangeInstallationDirectory: true,
           createDesktopShortcut: true,
           createStartMenuShortcut: true,
-          shortcutName: "Equilibria Electron Wallet"
+          shortcutName: "Legacy XEQ GUI"
         },
 
         portable: {
-          artifactName: "equilibria-electron-wallet-${version}-portable.exe"
+          artifactName: "Legacy-XEQ-GUI-${version}-Windows-Portable.exe"
         },
 
         linux: {

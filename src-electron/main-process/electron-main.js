@@ -100,6 +100,7 @@ function createWindow() {
     minHeight: 480,
     ...(iconPath ? { icon: iconPath } : {}),
     title,
+    backgroundColor: "#000000", // Dark background to prevent white flash
     webPreferences: {
       nodeIntegration: true,
       nodeIntegrationInWorker: true,

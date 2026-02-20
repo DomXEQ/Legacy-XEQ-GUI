@@ -51,6 +51,15 @@
           <q-item
             v-close-popup
             clickable
+            @click.native="refreshWalletConnection()"
+          >
+            <q-item-label header>{{
+              $t("menuItems.refreshConnection") || "Refresh RPC Connection"
+            }}</q-item-label>
+          </q-item>
+          <q-item
+            v-close-popup
+            clickable
             :disabled="!is_ready"
             @click.native="showModal('key_image')"
           >
@@ -641,6 +650,14 @@ export default {
         this.$gateway.send("wallet", "rescan_spent");
       }
     },
+    refreshWalletConnection() {
+      this.$q.notify({
+        type: "info",
+        timeout: 2000,
+        message: "Refreshing wallet connection..."
+      });
+      this.$gateway.send("wallet", "refresh_wallet");
+    },
     selectKeyImageExportPath() {
       this.$refs.keyImageExportSelect.click();
     },
@@ -821,17 +838,50 @@ export default {
 <style lang="scss">
 .password-modal {
   min-width: 400px;
-  background: white;
-  color: #1f1c47;
+  background: #0c1218;
+  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 12px;
 
   > * {
-    color: #1f1c47;
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .q-input {
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .q-field__label {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .q-field--focused .q-field__label {
+    color: #00d4ff;
+  }
+
+  .q-field__native {
+    color: rgba(255, 255, 255, 0.92) !important;
+  }
+
+  .q-field__bottom,
+  .q-field__control::before {
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .q-field--focused .q-field__control::after {
+    border-color: #00d4ff;
   }
 }
 
 .rescan-modal {
-  background: white;
-  color: #1f1c47;
+  background: #0c1218;
+  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 12px;
+
+  p {
+    color: rgba(255, 255, 255, 0.6);
+  }
 }
 
 .image-path {
@@ -840,30 +890,37 @@ export default {
 }
 
 .key-image-modal {
-  color: #1f1c47;
-  background: white;
+  color: rgba(255, 255, 255, 0.92);
+  background: #0c1218;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 12px;
 
   label * {
-    color: #1f1c47 !important;
+    color: rgba(255, 255, 255, 0.6) !important;
     text-overflow: ellipsis;
     overflow: hidden;
   }
   input {
     overflow: ellipsis;
+    color: rgba(255, 255, 255, 0.92);
   }
 }
+
 .export-transfers-modal {
-  color: #1f1c47;
-  background: white;
+  color: rgba(255, 255, 255, 0.92);
+  background: #0c1218;
   min-width: 500px;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 12px;
 
   label * {
-    color: #1f1c47 !important;
+    color: rgba(255, 255, 255, 0.6) !important;
     text-overflow: ellipsis;
     overflow: hidden;
   }
   input {
     overflow: ellipsis;
+    color: rgba(255, 255, 255, 0.92);
   }
 }
 
@@ -873,11 +930,17 @@ export default {
 }
 
 .private-key-modal {
-  background: white;
-  color: #1f1c47;
+  background: #0c1218;
+  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 12px;
 
   .copy-btn {
     margin-left: 8px;
+  }
+
+  h6 {
+    color: rgba(255, 255, 255, 0.6);
   }
 }
 

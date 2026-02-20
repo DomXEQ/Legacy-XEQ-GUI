@@ -276,11 +276,12 @@ export default {
 
 <style lang="scss">
 .message {
-  color: #1f1c47;
+  color: rgba(255, 255, 255, 0.85);
 }
 .init-screen-page {
   height: 100vh;
   position: relative;
+  color: rgba(255, 255, 255, 0.7);
 }
 .startup-icons {
   & > div {

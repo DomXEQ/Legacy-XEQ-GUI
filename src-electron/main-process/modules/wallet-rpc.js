@@ -23,6 +23,7 @@ export class WalletRPC {
       open: false,
       name: "",
       password_hash: null,
+      password: null,
       balance: null,
       unlocked_balance: null,
       accrued_balance: null,
@@ -33,6 +34,7 @@ export class WalletRPC {
     this.isRPCSyncing = false;
     this.dirs = null;
     this.last_height_send_time = Date.now();
+    this.heartbeatCount = 0;
 
     // save a pending tx here, so we don't have to send the
     // whole thing to the renderer
@@ -216,10 +218,12 @@ export class WalletRPC {
           )}`
         );
 
-        // save this info for later RPC calls
+        // save this info for later RPC calls and process restarts
         this.protocol = "http://";
         this.hostname = "127.0.0.1";
         this.port = options.wallet.rpc_bind_port;
+        this.rpcPath = null;
+        this.rpcArgs = args;
 
         // Try .exe first on Windows, then without extension
         let rpcPath;
@@ -241,6 +245,8 @@ export class WalletRPC {
           );
           return;
         }
+
+        this.rpcPath = rpcPath;
 
         portscanner
           .checkPortStatus(this.port, this.hostname)
@@ -381,7 +387,6 @@ export class WalletRPC {
         break;
 
       case "restore_view_wallet":
-        // TODO: Decide if we want this for Oxen
         this.restoreViewWallet(
           params.name,
           params.password,
@@ -518,6 +523,9 @@ export class WalletRPC {
         break;
       case "rescan_spent":
         this.rescanSpent();
+        break;
+      case "refresh_wallet":
+        this.refreshWallet();
         break;
       case "get_private_keys":
         this.getPrivateKeys(params.password);
@@ -664,6 +672,7 @@ export class WalletRPC {
       this.wallet_state.password_hash = crypto
         .pbkdf2Sync(password, salt, 1000, 64, "sha512")
         .toString("hex");
+      this.wallet_state.password = password;
       this.wallet_state.name = filename;
       this.wallet_state.open = true;
 
@@ -726,6 +735,7 @@ export class WalletRPC {
       this.wallet_state.password_hash = crypto
         .pbkdf2Sync(password, salt, 1000, 64, "sha512")
         .toString("hex");
+      this.wallet_state.password = password;
       this.wallet_state.name = filename;
       this.wallet_state.open = true;
 
@@ -793,6 +803,7 @@ export class WalletRPC {
       this.wallet_state.password_hash = crypto
         .pbkdf2Sync(password, salt, 1000, 64, "sha512")
         .toString("hex");
+      this.wallet_state.password = password;
       this.wallet_state.name = filename;
       this.wallet_state.open = true;
 
@@ -881,6 +892,7 @@ export class WalletRPC {
           this.wallet_state.password_hash = crypto
             .pbkdf2Sync(password, salt, 1000, 64, "sha512")
             .toString("hex");
+          this.wallet_state.password = password;
           this.wallet_state.name = wallet_name;
           this.wallet_state.open = true;
           this.finalizeNewWallet(wallet_name);
@@ -1012,6 +1024,7 @@ export class WalletRPC {
       this.wallet_state.password_hash = crypto
         .pbkdf2Sync(password, salt, 1000, 64, "sha512")
         .toString("hex");
+      this.wallet_state.password = password;
       this.wallet_state.name = filename;
       this.wallet_state.open = true;
 
@@ -1060,12 +1073,14 @@ export class WalletRPC {
   }
 
   heartbeatAction(extended = false) {
+    this.heartbeatCount = (this.heartbeatCount || 0) + 1;
     Promise.all([
       this.sendRPC("get_address", { account_index: 0 }, 5000),
       this.sendRPC("getheight", {}, 5000),
       this.sendRPC("getbalance", { account_index: 0 }, 5000)
     ]).then(data => {
       let didError = false;
+      let balanceChanged = false;
       let wallet = {
         status: {
           code: 0,
@@ -1132,6 +1147,8 @@ export class WalletRPC {
             info: wallet.info
           });
 
+          balanceChanged = true;
+
           // if balance has recently changed, get updated list of transactions and used addresses
           let actions = [this.getTransactions(), this.getAddressList()];
           actions.push(this.getAddressBook());
@@ -1146,10 +1163,19 @@ export class WalletRPC {
         }
       }
 
-      // Set the wallet state on initial heartbeat
+      // Poll transactions every ~30s even if balance hasn't changed
+      // This catches pending->confirmed transitions and new incoming TXs
+      if (!extended && !balanceChanged && this.heartbeatCount % 6 === 0) {
+        this.getTransactions().then(txData => {
+          if (txData && txData.transactions) {
+            this.sendGateway("set_wallet_data", txData);
+          }
+        });
+      }
+
+      // Set the wallet state on initial heartbeat or after refresh
       if (extended) {
         if (!didError) {
-          // Ensure wallet.info has current balance data even if it didn't change
           if (
             !wallet.info.hasOwnProperty("balance") &&
             this.wallet_state.balance !== null
@@ -1159,7 +1185,20 @@ export class WalletRPC {
             wallet.info.accrued_balance = this.wallet_state.accrued_balance;
             wallet.info.accrued_balance_next_payout = this.wallet_state.accrued_balance_next_payout;
           }
-          this.sendGateway("set_wallet_data", wallet);
+          // Always fetch transactions on extended heartbeat so the tx list
+          // is never sent as empty (which would erase the UI list)
+          Promise.all([
+            this.getTransactions(),
+            this.getAddressList(),
+            this.getAddressBook()
+          ]).then(extData => {
+            for (let n of extData) {
+              Object.keys(n).map(key => {
+                wallet[key] = Object.assign(wallet[key] || {}, n[key]);
+              });
+            }
+            this.sendGateway("set_wallet_data", wallet);
+          });
         } else {
           this.closeWallet().then(() => {
             this.sendGateway("set_wallet_error", {
@@ -1621,7 +1660,7 @@ export class WalletRPC {
           return;
         }
 
-        amount = (parseFloat(amount) * 1e9).toFixed(0);
+        amount = (parseFloat(amount) * 1e4).toFixed(0);
 
         this.sendRPC("stake", {
           amount,
@@ -1820,6 +1859,7 @@ export class WalletRPC {
 
     let failed = false;
     let errorMessage = "Failed to relay transaction";
+    let txHashList = []; // Collect all tx hashes for display
 
     // submit each transaction individually
     for (let hex of this.pending_tx.metadataList) {
@@ -1891,6 +1931,7 @@ export class WalletRPC {
 
         if (data.hasOwnProperty("result")) {
           const tx_hash = data.result.tx_hash;
+          txHashList.push(tx_hash);
           if (note && note !== "") {
             this.saveTxNotes(tx_hash, note);
           }
@@ -1911,6 +1952,7 @@ export class WalletRPC {
             let data = await this.sendRPC("relay_tx", params);
             if (data.hasOwnProperty("result")) {
               const tx_hash = data.result.tx_hash;
+              txHashList.push(tx_hash);
               if (note && note !== "") {
                 this.saveTxNotes(tx_hash, note);
               }
@@ -1942,7 +1984,9 @@ export class WalletRPC {
       this.sendGateway(gatewayEndpoint, {
         code: 0,
         i18n: "notification.positive.sendSuccess",
-        sending: false
+        sending: false,
+        txid: txHashList.length > 0 ? txHashList[0] : null,
+        txidList: txHashList
       });
 
       if (address_book.hasOwnProperty("save") && address_book.save) {
@@ -1955,11 +1999,29 @@ export class WalletRPC {
       // no more pending txs, clear it out.
       this.pending_tx = null;
 
-      // Force a refresh to detect change outputs and new transactions
-      // Wait a moment for the transaction to be processed by the wallet RPC
-      setTimeout(() => {
-        this.heartbeatAction(true);
-      }, 2000);
+      // Save wallet immediately to persist tx_key for proof generation,
+      // then schedule process restart. The internal_error fires ~9s after relay_tx
+      // and deadlocks wallet-rpc, so we kill and restart the process.
+      console.log(
+        "[WalletRPC] TX sent successfully - saving wallet then scheduling restart"
+      );
+      this.saveWallet()
+        .then(() => {
+          console.log(
+            "[WalletRPC] Wallet saved to disk, scheduling process restart in 5s"
+          );
+          setTimeout(() => {
+            this.postTxRefresh();
+          }, 5000);
+        })
+        .catch(() => {
+          console.log(
+            "[WalletRPC] Wallet save failed, scheduling process restart immediately"
+          );
+          setTimeout(() => {
+            this.postTxRefresh();
+          }, 2000);
+        });
 
       return;
     }
@@ -1977,9 +2039,6 @@ export class WalletRPC {
   // send address and tx fees before sending
   // isSweepAll refers to if it's the sweep from service nodes page
   transfer(password, amount, address, priority, isSweepAll) {
-    console.log(
-      "TODO sean remove this - wallet: " + JSON.stringify(this.wallet)
-    );
     const cryptoCallback = (err, password_hash) => {
       if (err) {
         this.sendGateway("set_tx_status", {
@@ -1998,7 +2057,7 @@ export class WalletRPC {
         return;
       }
 
-      amount = (parseFloat(amount) * 1e9).toFixed(0);
+      amount = (parseFloat(amount) * 1e4).toFixed(0);
 
       const isSweepAllRPC = amount == this.wallet_state.unlocked_balance;
       const rpc_endpoint = isSweepAllRPC ? "sweep_all" : "transfer_split";
@@ -2253,15 +2312,20 @@ export class WalletRPC {
   }
 
   proveTransaction(txid, address, message) {
-    const _address = address.trim() === "" ? null : address;
-    const _message = message.trim() === "" ? null : message;
+    const _address = address && address.trim() !== "" ? address.trim() : null;
+    const _message = message && message.trim() !== "" ? message.trim() : null;
 
     const rpc_endpoint = _address ? "get_tx_proof" : "get_spend_proof";
-    const params = {
-      txid,
-      address: _address,
-      message: _message
-    };
+
+    // Build params object, only including non-null values
+    const params = { txid };
+    if (_address) params.address = _address;
+    if (_message) params.message = _message;
+
+    console.log(
+      `[WalletRPC] proveTransaction: endpoint=${rpc_endpoint}, params=`,
+      JSON.stringify(params)
+    );
 
     this.sendGateway("set_prove_transaction_status", {
       code: 1,
@@ -2269,28 +2333,50 @@ export class WalletRPC {
       state: {}
     });
 
-    this.sendRPC(rpc_endpoint, params).then(data => {
-      if (data.hasOwnProperty("error")) {
-        let error =
-          data.error.message.charAt(0).toUpperCase() +
-          data.error.message.slice(1);
+    this.sendRPC(rpc_endpoint, params)
+      .then(data => {
+        console.log(
+          `[WalletRPC] proveTransaction response:`,
+          JSON.stringify(data)
+        );
+
+        if (data.hasOwnProperty("error")) {
+          let error = "Unknown error";
+          if (data.error && data.error.message) {
+            error =
+              data.error.message.charAt(0).toUpperCase() +
+              data.error.message.slice(1);
+          }
+          console.log(`[WalletRPC] proveTransaction error:`, error);
+          this.sendGateway("set_prove_transaction_status", {
+            code: -1,
+            message: error,
+            state: {}
+          });
+          return;
+        }
+
+        console.log(
+          `[WalletRPC] proveTransaction success:`,
+          JSON.stringify(data.result)
+        );
+        this.sendGateway("set_prove_transaction_status", {
+          code: 0,
+          message: "",
+          state: {
+            txid,
+            ...(data.result || {})
+          }
+        });
+      })
+      .catch(err => {
+        console.log(`[WalletRPC] proveTransaction exception:`, err);
         this.sendGateway("set_prove_transaction_status", {
           code: -1,
-          message: error,
+          message: err.toString(),
           state: {}
         });
-        return;
-      }
-
-      this.sendGateway("set_prove_transaction_status", {
-        code: 0,
-        message: "",
-        state: {
-          txid,
-          ...(data.result || {})
-        }
       });
-    });
   }
 
   checkTransactionProof(signature, txid, address, message) {
@@ -2341,6 +2427,202 @@ export class WalletRPC {
 
   rescanSpent() {
     this.sendRPC("rescan_spent");
+  }
+
+  // Refresh RPC connection - closes and reopens the wallet to clear stuck state
+  async refreshWallet() {
+    console.log(
+      "[WalletRPC] Refreshing RPC wallet connection (process restart)..."
+    );
+
+    this.sendGateway("set_wallet_data", {
+      status: {
+        code: 0,
+        message: "Refreshing RPC wallet connection..."
+      }
+    });
+
+    await this.postTxRefresh();
+  }
+
+  // Automatic recovery after sending a TX.
+  // wallet-rpc's internal refresh thread crashes with wallet_internal_error after
+  // relay_tx, deadlocking its internal mutex. ALL RPCs hang after this.
+  // The ONLY fix is to kill and restart the wallet-rpc process entirely.
+  async postTxRefresh() {
+    const walletName = this.wallet_state.name;
+    const walletPassword = this.wallet_state.password;
+
+    if (
+      !walletName ||
+      walletPassword == null ||
+      !this.rpcPath ||
+      !this.rpcArgs
+    ) {
+      console.log(
+        "[WalletRPC] postTxRefresh: missing credentials or startup info, cannot recover"
+      );
+      return;
+    }
+
+    console.log(
+      "[WalletRPC] postTxRefresh: killing and restarting wallet-rpc process"
+    );
+
+    // Stop all heartbeats and abandon the stuck RPC queue
+    clearInterval(this.heartbeat);
+    clearInterval(this.onsHeartbeat);
+    this.queue = new queue(1, Infinity);
+
+    this.sendGateway("set_wallet_data", {
+      status: {
+        code: 0,
+        message: "Syncing wallet after transaction..."
+      }
+    });
+
+    // Kill the stuck wallet-rpc process
+    if (this.walletRPCProcess) {
+      try {
+        // Remove all listeners to prevent the old close handler from interfering
+        this.walletRPCProcess.removeAllListeners();
+        this.walletRPCProcess.stdout.removeAllListeners();
+        this.walletRPCProcess.stderr &&
+          this.walletRPCProcess.stderr.removeAllListeners();
+        this.walletRPCProcess.kill("SIGKILL");
+        this.walletRPCProcess = null;
+        console.log("[WalletRPC] postTxRefresh: killed wallet-rpc process");
+      } catch (e) {
+        console.error(
+          "[WalletRPC] postTxRefresh: error killing process:",
+          e.message
+        );
+      }
+    }
+
+    // Wait for the process to fully exit and the port to free up
+    await new Promise(resolve => {
+      const checkPort = () => {
+        portscanner
+          .checkPortStatus(this.port, this.hostname)
+          .catch(() => "closed")
+          .then(status => {
+            if (status === "closed") {
+              resolve();
+            } else {
+              setTimeout(checkPort, 500);
+            }
+          });
+      };
+      // Give it a moment to die first
+      setTimeout(checkPort, 1500);
+    });
+
+    console.log(
+      "[WalletRPC] postTxRefresh: port is free, starting new wallet-rpc process"
+    );
+
+    // Destroy old HTTP agent and create a fresh one
+    if (this.agent) this.agent.destroy();
+    this.agent = new http.Agent({ keepAlive: true, maxSockets: 1 });
+
+    // Start a fresh wallet-rpc process with the same args
+    try {
+      const spawnOptions =
+        process.platform === "win32" ? {} : { detached: true };
+      this.walletRPCProcess = child_process.spawn(
+        this.rpcPath,
+        this.rpcArgs,
+        spawnOptions
+      );
+
+      this.walletRPCProcess.stdout.on("data", data => {
+        process.stdout.write(`Wallet: ${data}`);
+        let lines = data.toString().split("\n");
+        let match,
+          height = null;
+        let isRPCSyncing = false;
+        for (const line of lines) {
+          for (const regex of this.height_regexes) {
+            match = line.match(regex.string);
+            if (match) {
+              height = regex.height(match);
+              isRPCSyncing = true;
+              break;
+            }
+          }
+        }
+        this.sendGateway("set_wallet_data", { isRPCSyncing });
+        this.isRPCSyncing = isRPCSyncing;
+        if (height && Date.now() - this.last_height_send_time > 1000) {
+          this.last_height_send_time = Date.now();
+          this.sendGateway("set_wallet_data", { info: { height } });
+        }
+      });
+      this.walletRPCProcess.on("error", err =>
+        process.stderr.write(`Wallet: ${err}`)
+      );
+      this.walletRPCProcess.on("close", code => {
+        process.stderr.write(`Wallet: exited with code ${code} \n`);
+        this.walletRPCProcess = null;
+        if (this.agent) this.agent.destroy();
+      });
+
+      // Wait for wallet-rpc to be ready (responds to get_languages)
+      await new Promise((resolve, reject) => {
+        let attempts = 0;
+        const intrvl = setInterval(() => {
+          attempts++;
+          if (attempts > 30) {
+            clearInterval(intrvl);
+            reject(new Error("Timed out waiting for wallet-rpc to start"));
+            return;
+          }
+          this.sendRPC("get_languages").then(data => {
+            if (!data.hasOwnProperty("error")) {
+              clearInterval(intrvl);
+              resolve();
+            }
+          });
+        }, 1000);
+      });
+
+      console.log("[WalletRPC] postTxRefresh: wallet-rpc process ready");
+
+      // Open the wallet
+      const openResult = await this.sendRPC(
+        "open_wallet",
+        {
+          filename: walletName,
+          password: walletPassword
+        },
+        30000
+      );
+
+      if (openResult.hasOwnProperty("error")) {
+        console.error(
+          "[WalletRPC] postTxRefresh: failed to open wallet:",
+          openResult.error
+        );
+      } else {
+        console.log(
+          "[WalletRPC] postTxRefresh: wallet opened, scanning blocks"
+        );
+        await this.sendRPC("refresh", {}, 120000);
+        console.log("[WalletRPC] postTxRefresh: block scan complete");
+      }
+    } catch (e) {
+      console.error("[WalletRPC] postTxRefresh: restart failed:", e.message);
+    }
+
+    // Reset balance tracking for fresh data
+    this.wallet_state.balance = null;
+    this.wallet_state.unlocked_balance = null;
+    this.wallet_state.accrued_balance = null;
+    this.wallet_state.accrued_balance_next_payout = null;
+
+    this.startHeartbeat();
+    console.log("[WalletRPC] postTxRefresh: recovery complete");
   }
 
   getPrivateKeys(password) {
@@ -3261,6 +3543,7 @@ export class WalletRPC {
       open: false,
       name: "",
       password_hash: null,
+      password: null,
       balance: null,
       unlocked_balance: null,
       accrued_balance: null,

@@ -96,5 +96,8 @@ jspm_packages/
 # Output of 'npm pack'
 *.tgz
 
+# Internal dev notes
+notes.md
+
 # Yarn Integrity file
 .yarn-integrity

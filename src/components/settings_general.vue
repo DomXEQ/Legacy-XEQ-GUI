@@ -208,7 +208,6 @@
       </div>
 
       <div class="row pl-sm q-mt-md">
-        <!-- TODO: Can be generalised to a "port" (or similar) field -->
         <OxenField
           class="col-3"
           :label="$t('fieldLabels.maxIncomingPeers')"

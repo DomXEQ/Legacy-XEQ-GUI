@@ -32,7 +32,7 @@
           :dark="theme == 'dark'"
           type="number"
           min="0"
-          :max="unlocked_balance / 1e9"
+          :max="unlocked_balance / 1e4"
           placeholder="0"
           borderless
           dense
@@ -120,7 +120,7 @@ export default {
         // the min and max are for that particular SN,
         // start at min/max for the wallet
         minStakeAmount: 0,
-        maxStakeAmount: this.unlocked_balance / 1e9
+        maxStakeAmount: this.unlocked_balance / 1e4
       },
       confirmFields: {
         isBlink: false,
@@ -381,7 +381,7 @@ export default {
       const { unlocked_balance } = this.info;
 
       const tx = {
-        amount: unlocked_balance / 1e9,
+        amount: unlocked_balance / 1e4,
         address: this.award_address,
         priority: 0
       };
@@ -437,7 +437,7 @@ export default {
           message: this.$t("notification.errors.zeroAmount")
         });
         return;
-      } else if (this.service_node.amount > this.unlocked_balance / 1e9) {
+      } else if (this.service_node.amount > this.unlocked_balance / 1e4) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,

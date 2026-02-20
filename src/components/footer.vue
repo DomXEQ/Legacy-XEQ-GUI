@@ -3,7 +3,10 @@
     <div class="status-line row items-center">
       <div class="status row items-center">
         <span>{{ $t("footer.status") }}:</span>
-        <span class="status-text" :class="[status]">{{
+        <span v-if="isRefreshing" class="status-text syncing">
+          {{ wallet.status.message }}
+        </span>
+        <span v-else class="status-text" :class="[status]">{{
           $t(`footer.${status}`)
         }}</span>
       </div>
@@ -82,7 +85,18 @@ export default {
         return 99.9;
       else return pct;
     },
+    isRefreshing() {
+      const msg = this.wallet.status.message;
+      return (
+        msg &&
+        msg !== "OK" &&
+        (msg.toLowerCase().includes("refreshing") ||
+          msg.toLowerCase().includes("syncing wallet"))
+      );
+    },
     status() {
+      if (this.isRefreshing) return "syncing";
+
       // Check if wallet is fully synced (at 100%)
       const walletIsFullySynced =
         this.wallet.info.height >= this.target_height - 1;

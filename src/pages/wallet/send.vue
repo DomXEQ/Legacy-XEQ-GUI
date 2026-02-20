@@ -9,7 +9,7 @@
       <div class="q-pa-md">
         <div class="row gutter-md">
           <!-- Amount -->
-          <div class="col-6 amount">
+          <div class="col-12 amount">
             <OxenField
               :label="$t('fieldLabels.amount')"
               :error="$v.newTx.amount.$error"
@@ -18,7 +18,7 @@
                 v-model="newTx.amount"
                 type="number"
                 min="0"
-                :max="unlocked_balance / 1e9"
+                :max="unlocked_balance / 1e4"
                 placeholder="0"
                 borderless
                 dense
@@ -26,15 +26,15 @@
               />
               <q-btn
                 color="primary"
-                @click="newTx.amount = unlocked_balance / 1e9"
+                @click="newTx.amount = unlocked_balance / 1e4"
               >
                 {{ $t("buttons.all") }}
               </q-btn>
             </OxenField>
           </div>
 
-          <!-- Priority -->
-          <div class="col-6 priority">
+          <!-- Priority hidden - only slow/safe tx type available on current mainnet -->
+          <div class="col-6 priority" style="display: none;">
             <OxenField :label="$t('fieldLabels.priority')">
               <q-select
                 v-model="newTx.priority"
@@ -141,6 +141,7 @@ import OxenField from "components/oxen_field";
 import WalletPassword from "src/mixins/wallet_password";
 import ConfirmDialogMixin from "src/mixins/confirm_dialog_mixin";
 import ConfirmTransactionDialog from "components/confirm_tx_dialog";
+const { clipboard } = require("electron");
 const objectAssignDeep = require("object-assign-deep");
 
 // the case for doing nothing on a tx_status update
@@ -161,7 +162,7 @@ export default {
       newTx: {
         amount: 0,
         address: "",
-        priority: priorityOptions[0].value,
+        priority: 1,
         address_book: {
           save: false,
           name: "",
@@ -230,16 +231,73 @@ export default {
             this.buildDialogFieldsSend(val);
             break;
           case 0:
-            this.$q.notify({
-              type: "positive",
-              timeout: 1000,
-              message
-            });
+            // Show TXID if available
+            if (val.txid) {
+              const sentTxid = val.txid;
+              this.$q
+                .dialog({
+                  title:
+                    this.$t("titles.transactionSent") || "Transaction Sent",
+                  message: `
+                  <div style="text-align: center; margin-bottom: 16px;">
+                    <div style="font-size: 14px; color: #00ff88; margin-bottom: 12px;">
+                      ✓ ${message}
+                    </div>
+                    <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                      Transaction ID
+                    </div>
+                    <div id="txid-display" style="
+                      background: #0a0e14;
+                      border: 1px solid rgba(0, 212, 255, 0.2);
+                      border-radius: 8px;
+                      padding: 12px;
+                      font-family: 'JetBrains Mono', monospace;
+                      font-size: 13px;
+                      word-break: break-all;
+                      user-select: all;
+                      color: rgba(255,255,255,0.92);
+                    ">${sentTxid}</div>
+                    <div style="
+                      margin-top: 14px;
+                      padding: 10px;
+                      background: rgba(255, 170, 0, 0.08);
+                      border: 1px solid rgba(255, 170, 0, 0.25);
+                      border-radius: 6px;
+                      font-size: 12px;
+                      color: rgba(255, 255, 255, 0.7);
+                      line-height: 1.5;
+                    ">
+                      <strong style="color: #ffaa00;">IMPORTANT:</strong> Save your Transaction ID above. You will need it to generate a proof for the swap portal.<br><br>
+                      Your remaining balance will be temporarily locked while the transaction confirms. Funds typically unlock after <span style="color: #ffaa00; font-weight: 600;">~10 blocks (~20 minutes)</span>.
+                    </div>
+                  </div>
+                `,
+                  html: true,
+                  ok: {
+                    label: "COPY TXID & CLOSE",
+                    color: "primary"
+                  }
+                })
+                .onOk(() => {
+                  clipboard.writeText(sentTxid);
+                  this.$q.notify({
+                    type: "positive",
+                    timeout: 2000,
+                    message: "Transaction ID copied to clipboard"
+                  });
+                });
+            } else {
+              this.$q.notify({
+                type: "positive",
+                timeout: 1000,
+                message
+              });
+            }
             this.$v.$reset();
             this.newTx = {
               amount: 0,
               address: "",
-              priority: this.priorityOptions[0].value,
+              priority: 1,
               address_book: {
                 save: false,
                 name: "",
@@ -338,7 +396,7 @@ export default {
           message: this.$t("notification.errors.zeroAmount")
         });
         return;
-      } else if (this.newTx.amount > this.unlocked_balance / 1e9) {
+      } else if (this.newTx.amount > this.unlocked_balance / 1e4) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,

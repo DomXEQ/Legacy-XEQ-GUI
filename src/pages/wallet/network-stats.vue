@@ -203,9 +203,9 @@ export default {
       const staked = node.total_contributed || 0;
       const stakingRequirement = node.staking_requirement || 0;
 
-      // Convert from atomic units to XEQ (divide by 1e9)
-      const stakedXEQ = Math.round(staked / 1e9);
-      const requiredXEQ = Math.round(stakingRequirement / 1e9);
+      // Convert from atomic units to XEQ (divide by 1e4)
+      const stakedXEQ = Math.round(staked / 1e4);
+      const requiredXEQ = Math.round(stakingRequirement / 1e4);
 
       // Return format: "staked/required" (e.g., "10/100" or "100/100")
       if (stakingRequirement === 0) {
@@ -218,11 +218,78 @@ export default {
 };
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .network-stats-page {
   .header {
     h5 {
       font-weight: 500;
+      color: rgba(255, 255, 255, 0.92);
+    }
+  }
+
+  .q-card {
+    background: #0c1218;
+    border: 1px solid rgba(0, 212, 255, 0.1);
+    border-radius: 12px;
+
+    .text-h6 {
+      color: rgba(255, 255, 255, 0.6);
+      font-weight: 500;
+    }
+
+    .text-h4 {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 600;
+    }
+  }
+
+  // Table styling
+  .q-table {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.92);
+
+    // Header
+    thead tr th {
+      background: #080c12;
+      color: rgba(255, 255, 255, 0.6);
+      font-weight: 600;
+      border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+    }
+
+    // Body rows
+    tbody tr {
+      background: #0c1218;
+
+      &:hover {
+        background: #101820;
+      }
+
+      td {
+        color: rgba(255, 255, 255, 0.85);
+        border-bottom: 1px solid rgba(0, 212, 255, 0.05);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12px;
+      }
+    }
+
+    // Pagination
+    .q-table__bottom {
+      background: #080c12;
+      color: rgba(255, 255, 255, 0.6);
+      border-top: 1px solid rgba(0, 212, 255, 0.1);
+
+      .q-table__control {
+        color: rgba(255, 255, 255, 0.6);
+      }
+    }
+  }
+
+  // Refresh button
+  .q-btn {
+    color: #00d4ff;
+
+    &:hover {
+      background: rgba(0, 212, 255, 0.1);
     }
   }
 }
