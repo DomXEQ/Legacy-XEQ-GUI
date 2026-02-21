@@ -20,7 +20,7 @@ jobs:
           docker create --name temp-extract ghcr.io/equilibriahorizon/equilibria-node:latest
           mkdir -p bin
           echo "=== Listing available binaries ==="
-          docker run --rm ghcr.io/equilibriahorizon/equilibria-node:latest ls -la /usr/local/bin/
+          docker run --rm --entrypoint ls ghcr.io/equilibriahorizon/equilibria-node:latest -la /usr/local/bin/
           echo "=== Extracting binaries ==="
           docker cp temp-extract:/usr/local/bin/xeq-wallet-rpc ./bin/ 2>/dev/null && echo "Got xeq-wallet-rpc" || echo "xeq-wallet-rpc not found"
           docker cp temp-extract:/usr/local/bin/xeq-d ./bin/ 2>/dev/null && echo "Got xeq-d" || echo "xeq-d not found"
