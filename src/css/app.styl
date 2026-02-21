@@ -1066,15 +1066,24 @@ footer,
 .q-notification {
     background: $bg-card;
     border: 1px solid $border-default;
+    color: rgba(255, 255, 255, 0.9);
 
     &.bg-positive {
-        background: rgba(0, 255, 136, 0.1);
+        background: rgba(0, 255, 136, 0.15);
         border-color: $positive;
+        color: #ffffff;
     }
 
     &.bg-negative {
-        background: rgba(255, 71, 87, 0.1);
+        background: rgba(255, 71, 87, 0.15);
         border-color: $negative;
+        color: #ffffff;
+    }
+
+    &.bg-warning {
+        background: rgba(255, 170, 0, 0.15);
+        border-color: $warning;
+        color: #ffffff;
     }
 }
 

@@ -204,6 +204,13 @@ function createWindow() {
 
   mainWindow.loadURL(process.env.APP_URL);
   mainWindowState.manage(mainWindow);
+
+  // Enable DevTools with F12 in production for debugging
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if (input.key === "F12") {
+      mainWindow.webContents.toggleDevTools();
+    }
+  });
 }
 
 app.on("ready", () => {

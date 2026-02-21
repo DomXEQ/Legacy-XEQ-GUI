@@ -172,7 +172,6 @@ module.exports = function() {
         copyright: "Copyright © 2025 Equilibria",
         afterSign: "build/notarize.js",
         artifactName: "Legacy-XEQ-GUI-${version}-${os}.${ext}",
-        publish: "github",
 
         win: {
           target: [

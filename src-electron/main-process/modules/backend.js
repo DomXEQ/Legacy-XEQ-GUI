@@ -35,33 +35,16 @@ export class Backend {
 
   init(config) {
     let configDir;
-    let legacyLokiConfigDir;
-    let legacyOxenConfigDir;
     if (os.platform() === "win32") {
       configDir = "C:\\ProgramData\\equilibria";
-      legacyLokiConfigDir = "C:\\ProgramData\\loki\\";
-      legacyOxenConfigDir = "C:\\ProgramData\\oxen\\";
-      // Use wallets folder in the application directory
-      this.wallet_dir = path.join(process.cwd(), "wallets");
     } else {
       configDir = path.join(os.homedir(), ".equilibria");
-      legacyLokiConfigDir = path.join(os.homedir(), ".loki/");
-      legacyOxenConfigDir = path.join(os.homedir(), ".oxen/");
-      // Use wallets folder in the application directory
-      this.wallet_dir = path.join(process.cwd(), "wallets");
     }
+    this.wallet_dir = path.join(process.cwd(), "wallets");
 
-    // if the user has used loki or oxen before, just keep the same stuff
-    if (fs.existsSync(legacyLokiConfigDir)) {
-      this.config_dir = legacyLokiConfigDir;
-    } else if (fs.existsSync(legacyOxenConfigDir)) {
-      this.config_dir = legacyOxenConfigDir;
-    } else {
-      // create the new, Equilibria location
-      this.config_dir = configDir;
-      if (!fs.existsSync(configDir)) {
-        fs.mkdirpSync(configDir);
-      }
+    this.config_dir = configDir;
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirpSync(configDir);
     }
 
     if (!fs.existsSync(path.join(this.config_dir, "gui"))) {
@@ -489,34 +472,27 @@ export class Backend {
         `[Backend] Wallet directory set to: ${this.config_data.app.wallet_data_dir}`
       );
 
-      // Check to see if data and wallet directories exist
-      const dirs_to_check = [
-        {
-          path: data_dir,
-          error: "notification.errors.dataPathNotFound"
-        },
-        {
-          path: wallet_data_dir,
-          error: "notification.errors.walletPathNotFound"
-        }
-      ];
-
+      // Ensure data and wallet directories exist (create if missing)
+      const dirs_to_check = [data_dir, wallet_data_dir];
       for (const dir of dirs_to_check) {
-        // Check to see if dir exists
-        if (!fs.existsSync(dir.path)) {
-          this.send("show_notification", {
-            type: "negative",
-            i18n: dir.error,
-            timeout: 2000
-          });
-
-          // Go back to config
-          this.send("set_app_data", {
-            status: {
-              code: -1 // Return to config screen
-            }
-          });
-          return;
+        if (!fs.existsSync(dir)) {
+          try {
+            fs.mkdirpSync(dir);
+            console.log(`[Backend] Created missing directory: ${dir}`);
+          } catch (e) {
+            console.error(`[Backend] Failed to create directory: ${dir}`, e);
+            this.send("show_notification", {
+              type: "negative",
+              message: `Failed to create directory: ${dir}`,
+              timeout: 3000
+            });
+            this.send("set_app_data", {
+              status: {
+                code: -1
+              }
+            });
+            return;
+          }
         }
       }
 
