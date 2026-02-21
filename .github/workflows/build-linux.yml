@@ -1,0 +1,64 @@
+name: Build Linux
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Extract Linux binaries from Docker image
+        run: |
+          docker pull ghcr.io/equilibriahorizon/equilibria-node:latest
+          docker create --name temp-extract ghcr.io/equilibriahorizon/equilibria-node:latest
+          mkdir -p bin
+          echo "=== Listing available binaries ==="
+          docker run --rm ghcr.io/equilibriahorizon/equilibria-node:latest ls -la /usr/local/bin/
+          echo "=== Extracting binaries ==="
+          docker cp temp-extract:/usr/local/bin/xeq-wallet-rpc ./bin/ 2>/dev/null && echo "Got xeq-wallet-rpc" || echo "xeq-wallet-rpc not found"
+          docker cp temp-extract:/usr/local/bin/xeq-d ./bin/ 2>/dev/null && echo "Got xeq-d" || echo "xeq-d not found"
+          docker cp temp-extract:/usr/local/bin/wallet-cli ./bin/ 2>/dev/null && echo "Got wallet-cli" || echo "wallet-cli not found"
+          docker rm temp-extract
+          echo "=== bin/ contents ==="
+          ls -la bin/
+          chmod +x bin/*
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-0 libnotify4 libnss3 libxss1 libxtst6 xdg-utils libatspi2.0-0 libuuid1 libsecret-1-0 libappindicator3-1
+
+      - name: Build Linux
+        run: npm run build:linux
+
+      - name: List build output
+        run: |
+          echo "=== Build output ==="
+          ls -lah dist/electron/Packaged/ 2>/dev/null || echo "Packaged dir not found"
+
+      - name: Upload to latest release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v1
+          files: |
+            dist/electron/Packaged/*.AppImage
+            dist/electron/Packaged/*.deb
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
