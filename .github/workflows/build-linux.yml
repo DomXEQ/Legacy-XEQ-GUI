@@ -14,18 +14,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Extract Linux binaries from Docker image
+      - name: Download v22 Linux binaries from EquilibriaCC
         run: |
-          docker pull ghcr.io/equilibriahorizon/equilibria-node:latest
-          docker create --name temp-extract ghcr.io/equilibriahorizon/equilibria-node:latest
           mkdir -p bin
-          echo "=== Listing available binaries ==="
-          docker run --rm --entrypoint ls ghcr.io/equilibriahorizon/equilibria-node:latest -la /usr/local/bin/
-          echo "=== Extracting binaries ==="
-          docker cp temp-extract:/usr/local/bin/xeq-wallet-rpc ./bin/ 2>/dev/null && echo "Got xeq-wallet-rpc" || echo "xeq-wallet-rpc not found"
-          docker cp temp-extract:/usr/local/bin/xeq-d ./bin/ 2>/dev/null && echo "Got xeq-d" || echo "xeq-d not found"
-          docker cp temp-extract:/usr/local/bin/wallet-cli ./bin/ 2>/dev/null && echo "Got wallet-cli" || echo "wallet-cli not found"
-          docker rm temp-extract
+          echo "=== Downloading EquilibriaCC v22.0.1 Linux release ==="
+          wget -q https://github.com/EquilibriaCC/equilibria-wallet/releases/download/v22.0.1/EquilibriaCC-Wallet.22.0.1.linux.x64.tar.xz -O wallet.tar.xz
+          echo "=== Extracting archive ==="
+          tar xf wallet.tar.xz
+          echo "=== Listing extracted contents ==="
+          find . -maxdepth 4 -name "xeq-*" -o -name "wallet-cli" -o -name "daemon" | head -20
+          echo "=== Searching for binaries ==="
+          find . -type f \( -name "xeq-wallet-rpc" -o -name "xeq-d" -o -name "wallet-cli" \) | while read f; do
+            echo "Found: $f"
+            cp "$f" ./bin/
+          done
           echo "=== bin/ contents ==="
           ls -la bin/
           chmod +x bin/*
