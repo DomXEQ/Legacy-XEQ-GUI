@@ -109,13 +109,29 @@ export class Daemon {
       this.hostname = daemon.remote_host;
       this.port = daemon.remote_port;
 
+      this.backend.sendLog(
+        "info",
+        `Connecting to remote node ${daemon.remote_host}:${daemon.remote_port}...`
+      );
+
       return new Promise((resolve, reject) => {
-        // Set a 20 second timeout on get_info incase the node is unresponsive
         this.sendRPC("get_info", {}, { timeout: 20000 }).then(data => {
           if (!data.hasOwnProperty("error")) {
+            const h = data.result ? data.result.height : "unknown";
+            this.backend.sendLog(
+              "info",
+              `Connected to remote node — daemon height: ${h}`
+            );
             this.startHeartbeat();
             resolve();
           } else {
+            const msg = data.error
+              ? data.error.message || JSON.stringify(data.error)
+              : "unknown error";
+            this.backend.sendLog(
+              "error",
+              `Failed to connect to remote node ${daemon.remote_host}:${daemon.remote_port} — ${msg}`
+            );
             reject();
           }
         });
@@ -462,9 +478,10 @@ export class Daemon {
   }
 
   heartbeatAction() {
+    this.daemonHeartbeatCount = (this.daemonHeartbeatCount || 0) + 1;
+
     let actions = [];
 
-    // No difference between local and remote heartbeat action for now
     if (this.local) {
       actions = [this.getRPC("info")];
     } else {
@@ -473,19 +490,39 @@ export class Daemon {
 
     Promise.all(actions).then(data => {
       let daemon_info = {};
+      let gotInfo = false;
       for (let n of data) {
         if (
           n == undefined ||
           !n.hasOwnProperty("result") ||
           n.result == undefined
         ) {
+          if (n && n.error) {
+            const msg = n.error.message || JSON.stringify(n.error);
+            this.backend.sendLog(
+              "error",
+              `Daemon RPC ${n.method || "unknown"} failed: ${msg}`
+            );
+          }
           continue;
         }
         if (n.method == "get_info") {
           daemon_info.info = n.result;
+          gotInfo = true;
         }
       }
       this.sendGateway("set_daemon_data", daemon_info);
+
+      if (gotInfo && this.daemonHeartbeatCount % 6 === 1) {
+        const h = daemon_info.info.height || 0;
+        const target = daemon_info.info.target_height || h;
+        this.backend.sendLog(
+          "info",
+          `Daemon status — height: ${h}, target: ${target}, connections: ${daemon_info
+            .info.outgoing_connections_count || 0} out / ${daemon_info.info
+            .incoming_connections_count || 0} in`
+        );
+      }
     });
   }
 

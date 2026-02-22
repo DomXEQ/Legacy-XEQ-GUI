@@ -247,6 +247,10 @@ export class WalletRPC {
         }
 
         this.rpcPath = rpcPath;
+        this.backend.sendLog(
+          "info",
+          `Starting wallet RPC (daemon: ${daemon_address})`
+        );
 
         portscanner
           .checkPortStatus(this.port, this.hostname)
@@ -306,11 +310,14 @@ export class WalletRPC {
                 }
               });
 
-              // To let caller know when the wallet is ready
               let intrvl = setInterval(() => {
                 this.sendRPC("get_languages").then(data => {
                   if (!data.hasOwnProperty("error")) {
                     clearInterval(intrvl);
+                    this.backend.sendLog(
+                      "info",
+                      "Wallet RPC started and responding"
+                    );
                     resolve();
                   } else {
                     if (
@@ -993,14 +1000,21 @@ export class WalletRPC {
 
   openWallet(filename, password) {
     this.sendGateway("reset_wallet_error");
+    this.backend.sendLog("info", `Opening wallet: ${filename}`);
     this.sendRPC("open_wallet", {
       filename,
       password
     }).then(data => {
       if (data.hasOwnProperty("error")) {
+        this.backend.sendLog(
+          "error",
+          `Failed to open wallet "${filename}": ${data.error.message ||
+            JSON.stringify(data.error)}`
+        );
         this.sendGateway("set_wallet_error", { status: data.error });
         return;
       }
+      this.backend.sendLog("info", `Wallet "${filename}" opened successfully`);
 
       let address_txt_path = path.join(
         this.wallet_dir,
@@ -1086,6 +1100,23 @@ export class WalletRPC {
     ]).then(data => {
       let didError = false;
       let balanceChanged = false;
+      let rpcFailures = [];
+
+      for (const n of data) {
+        if (n && n.hasOwnProperty("error") && n.error) {
+          rpcFailures.push(
+            `${n.method || "unknown"}: ${n.error.message ||
+              JSON.stringify(n.error)}`
+          );
+        }
+      }
+
+      if (rpcFailures.length > 0) {
+        this.backend.sendLog(
+          "error",
+          `Wallet RPC heartbeat failures — ${rpcFailures.join("; ")}`
+        );
+      }
       let wallet = {
         status: {
           code: 0,
@@ -1166,6 +1197,15 @@ export class WalletRPC {
             this.sendGateway("set_wallet_data", wallet);
           });
         }
+      }
+
+      if (this.heartbeatCount % 6 === 1 && wallet.info.height !== undefined) {
+        this.backend.sendLog(
+          "info",
+          `Wallet status — height: ${wallet.info.height}, syncing: ${
+            this.isRPCSyncing ? "yes" : "no"
+          }`
+        );
       }
 
       // Poll transactions every ~30s even if balance hasn't changed
