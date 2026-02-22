@@ -17,20 +17,50 @@ jobs:
       - name: Download v22 Linux binaries from EquilibriaCC
         run: |
           mkdir -p bin
-          echo "=== Downloading EquilibriaCC v22.0.1 Linux release ==="
-          wget -q https://github.com/EquilibriaCC/equilibria-wallet/releases/download/v22.0.1/EquilibriaCC-Wallet.22.0.1.linux.x64.tar.xv -O wallet.tar.xz
+          echo "=== Downloading EquilibriaCC v22.0.0 daemon/tools release (x86_64 Linux) ==="
+          wget -q https://github.com/EquilibriaCC/Equilibria/releases/download/v22.0.0/build-depends-x86_64-linux.zip -O build-depends.zip
           echo "=== Extracting archive ==="
-          tar xf wallet.tar.xz || xz -d wallet.tar.xz && tar xf wallet.tar 2>/dev/null || true
-          echo "=== Listing extracted contents ==="
-          find . -maxdepth 4 -name "xeq-*" -o -name "wallet-cli" -o -name "daemon" | head -20
+          unzip -o build-depends.zip
+          echo "=== ALL extracted files ==="
+          find . -path ./node_modules -prune -o -path ./.git -prune -o -type f -print | grep -v node_modules | grep -v '.git/' | head -60
           echo "=== Searching for binaries ==="
-          find . -type f \( -name "xeq-wallet-rpc" -o -name "xeq-d" -o -name "wallet-cli" \) | while read f; do
-            echo "Found: $f"
-            cp "$f" ./bin/
+          find . -path ./node_modules -prune -o -path ./.git -prune -o -type f \( -name "xeq-wallet-rpc" -o -name "xeq-d" -o -name "wallet-rpc" -o -name "daemon" -o -name "wallet-cli" -o -name "xeq-wallet-cli" \) -print | head -20
+          echo "=== Copying binaries ==="
+          for NAME in xeq-wallet-rpc wallet-rpc; do
+            F=$(find . -path ./node_modules -prune -o -path ./.git -prune -o -type f -name "$NAME" -print | head -1)
+            if [ -n "$F" ]; then
+              echo "Found: $F -> bin/xeq-wallet-rpc"
+              cp "$F" ./bin/xeq-wallet-rpc
+              break
+            fi
           done
-          echo "=== bin/ contents ==="
+          for NAME in xeq-d daemon equilibriad; do
+            F=$(find . -path ./node_modules -prune -o -path ./.git -prune -o -type f -name "$NAME" -print | head -1)
+            if [ -n "$F" ]; then
+              echo "Found: $F -> bin/xeq-d"
+              cp "$F" ./bin/xeq-d
+              break
+            fi
+          done
+          for NAME in xeq-wallet-cli wallet-cli; do
+            F=$(find . -path ./node_modules -prune -o -path ./.git -prune -o -type f -name "$NAME" -print | head -1)
+            if [ -n "$F" ]; then
+              echo "Found: $F -> bin/wallet-cli"
+              cp "$F" ./bin/wallet-cli
+              break
+            fi
+          done
+          echo "=== Final bin/ contents ==="
           ls -la bin/
           chmod +x bin/*
+          echo "=== Verify binaries ==="
+          file bin/* || true
+          echo "=== Check for xeq-wallet-rpc ==="
+          if [ ! -f bin/xeq-wallet-rpc ]; then
+            echo "FATAL: xeq-wallet-rpc not found! Build will fail."
+            exit 1
+          fi
+          echo "All required binaries present."
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
