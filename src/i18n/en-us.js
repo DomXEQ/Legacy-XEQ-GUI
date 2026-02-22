@@ -664,7 +664,8 @@ export default {
       tabs: {
         general: "General",
         language: "Language",
-        peers: "Peers"
+        peers: "Peers",
+        troubleshooting: "Troubleshooting"
       }
     },
     transactionDetails: "Transaction details",

@@ -175,12 +175,13 @@ export class Daemon {
         args.push("--add-priority-node", "84.247.143.210:18080");
       }
 
-      if (daemon.type === "local_remote" && net_type === "mainnet") {
-        args.push(
-          "--bootstrap-daemon-address",
-          `${daemon.remote_host}:${daemon.remote_port}`
-        );
-      }
+      // local_remote option removed for Legacy XEQ — New XEQ Mainnet only
+      // if (daemon.type === "local_remote" && net_type === "mainnet") {
+      //   args.push(
+      //     "--bootstrap-daemon-address",
+      //     `${daemon.remote_host}:${daemon.remote_port}`
+      //   );
+      // }
 
       // save this info for later RPC calls
       this.protocol = "http://";

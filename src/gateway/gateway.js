@@ -65,6 +65,22 @@ export class Gateway extends EventEmitter {
         this.router.replace({ path: "/quit" });
       }
     });
+
+    this.pushLog("info", "GUI session started");
+
+    const origOnError = window.onerror;
+    window.onerror = (message, script, line, col, error) => {
+      this.pushLog("error", `${message} (${script}:${line}:${col})`);
+      if (origOnError) origOnError(message, script, line, col, error);
+    };
+
+    const origRejection = window.onunhandledrejection;
+    window.addEventListener("unhandledrejection", ev => {
+      const info =
+        ev.reason && ev.reason.stack ? ev.reason.stack : String(ev.reason);
+      this.pushLog("error", `Unhandled promise rejection: ${info}`);
+      if (origRejection) origRejection(ev);
+    });
   }
 
   open() {
@@ -119,6 +135,18 @@ export class Gateway extends EventEmitter {
       this.token
     );
     this.ws.send(encrypted_data);
+  }
+
+  pushLog(level, message, source = "GUI") {
+    try {
+      this.app.store.commit("gateway/push_session_log", {
+        level,
+        message,
+        source
+      });
+    } catch (e) {
+      // Store may not be ready yet
+    }
   }
 
   geti18n(key) {
@@ -256,6 +284,12 @@ export class Gateway extends EventEmitter {
         this.confirmClose(i18n.t("dialog.restart.message"), true);
         break;
 
+      case "session_log": {
+        const { level, message } = decrypted_data.data;
+        this.pushLog(level || "info", message, "Backend");
+        break;
+      }
+
       case "show_notification": {
         let notification = {
           type: "positive",
@@ -266,7 +300,20 @@ export class Gateway extends EventEmitter {
         if (data.i18n) {
           notification.message = this.geti18n(data.i18n);
         }
-        Notify.create(Object.assign(notification, data));
+        const merged = Object.assign(notification, data);
+        Notify.create(merged);
+
+        const logLevel =
+          merged.type === "negative"
+            ? "error"
+            : merged.type === "warning"
+            ? "warn"
+            : "info";
+        this.pushLog(
+          logLevel,
+          merged.message || "(no message)",
+          "Notification"
+        );
         break;
       }
 

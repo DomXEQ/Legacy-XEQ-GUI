@@ -8,13 +8,14 @@
           :label="$t('strings.daemon.remote.title')"
         />
       </div>
-      <div>
+      <!-- Local + Remote commented out for Legacy XEQ — not needed, confuses users -->
+      <!-- <div>
         <q-radio
           v-model="config_daemon.type"
           val="local_remote"
           :label="$t('strings.daemon.localRemote.title')"
         />
-      </div>
+      </div> -->
       <div>
         <q-radio
           v-model="config_daemon.type"
@@ -24,9 +25,9 @@
       </div>
     </div>
 
-    <p v-if="config_daemon.type == 'local_remote'" class="tab-desc">
+    <!-- <p v-if="config_daemon.type == 'local_remote'" class="tab-desc">
       {{ $t("strings.daemon.localRemote.description") }}
-    </p>
+    </p> -->
     <p v-if="config_daemon.type == 'local'" class="tab-desc">
       {{ $t("strings.daemon.local.description") }}
     </p>
@@ -399,13 +400,14 @@ export default {
     }
   }),
   mounted() {
-    if (
-      this.randomiseRemote &&
-      this.remotes.length > 0 &&
-      this.config.app.net_type === "mainnet"
-    ) {
-      const index = Math.floor(Math.random() * Math.floor(this.remotes.length));
-      this.setPreset(this.remotes[index]);
+    if (this.randomiseRemote && this.config.app.net_type === "mainnet") {
+      this.setPreset({ host: "us.equilibriacc.com", port: "9231" });
+      this.config_daemon.type = "remote";
+    }
+
+    // If someone had local_remote saved, fall back to remote
+    if (this.config_daemon.type === "local_remote") {
+      this.config_daemon.type = "remote";
     }
   },
   methods: {

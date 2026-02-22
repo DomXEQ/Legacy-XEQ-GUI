@@ -646,11 +646,16 @@ export class WalletRPC {
     }).then(data => {
       if (data.hasOwnProperty("error")) {
         console.error(`[WalletRPC] Error creating wallet:`, data.error);
+        this.backend.sendLog(
+          "error",
+          `Error creating wallet: ${JSON.stringify(data.error)}`
+        );
         this.sendGateway("set_wallet_error", { status: data.error });
         return;
       }
 
       console.log(`[WalletRPC] Wallet created successfully: ${filename}`);
+      this.backend.sendLog("info", `Wallet created: ${filename}`);
 
       // Verify wallet files were created
       const wallet_file = path.join(this.wallet_dir, filename);
@@ -2005,6 +2010,10 @@ export class WalletRPC {
       console.log(
         "[WalletRPC] TX sent successfully - saving wallet then scheduling restart"
       );
+      this.backend.sendLog(
+        "info",
+        "Transaction sent successfully — scheduling wallet recovery"
+      );
       this.saveWallet()
         .then(() => {
           console.log(
@@ -2348,6 +2357,7 @@ export class WalletRPC {
               data.error.message.slice(1);
           }
           console.log(`[WalletRPC] proveTransaction error:`, error);
+          this.backend.sendLog("error", `Proof generation failed: ${error}`);
           this.sendGateway("set_prove_transaction_status", {
             code: -1,
             message: error,
@@ -2434,6 +2444,10 @@ export class WalletRPC {
     console.log(
       "[WalletRPC] Refreshing RPC wallet connection (process restart)..."
     );
+    this.backend.sendLog(
+      "info",
+      "Refreshing RPC wallet connection (process restart)..."
+    );
 
     this.sendGateway("set_wallet_data", {
       status: {
@@ -2492,10 +2506,18 @@ export class WalletRPC {
         this.walletRPCProcess.kill("SIGKILL");
         this.walletRPCProcess = null;
         console.log("[WalletRPC] postTxRefresh: killed wallet-rpc process");
+        this.backend.sendLog(
+          "warn",
+          "Wallet RPC process killed for post-TX recovery"
+        );
       } catch (e) {
         console.error(
           "[WalletRPC] postTxRefresh: error killing process:",
           e.message
+        );
+        this.backend.sendLog(
+          "error",
+          `postTxRefresh: error killing process: ${e.message}`
         );
       }
     }
@@ -2588,6 +2610,7 @@ export class WalletRPC {
       });
 
       console.log("[WalletRPC] postTxRefresh: wallet-rpc process ready");
+      this.backend.sendLog("info", "Wallet RPC restarted and ready");
 
       // Open the wallet
       const openResult = await this.sendRPC(
@@ -2613,6 +2636,10 @@ export class WalletRPC {
       }
     } catch (e) {
       console.error("[WalletRPC] postTxRefresh: restart failed:", e.message);
+      this.backend.sendLog(
+        "error",
+        `postTxRefresh restart failed: ${e.message}`
+      );
     }
 
     // Reset balance tracking for fresh data
@@ -2623,6 +2650,7 @@ export class WalletRPC {
 
     this.startHeartbeat();
     console.log("[WalletRPC] postTxRefresh: recovery complete");
+    this.backend.sendLog("info", "Post-TX recovery complete — wallet synced");
   }
 
   getPrivateKeys(password) {

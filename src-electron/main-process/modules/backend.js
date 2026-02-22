@@ -160,6 +160,10 @@ export class Backend {
     });
   }
 
+  sendLog(level, message) {
+    this.send("session_log", { level, message });
+  }
+
   receive(data) {
     let decrypted_data = JSON.parse(this.scee.decryptString(data, this.token));
 
@@ -441,6 +445,17 @@ export class Backend {
         ...validated
       };
 
+      // Migrate local_remote -> remote (option removed for Legacy XEQ)
+      for (const net of ["mainnet", "stagenet", "testnet"]) {
+        if (
+          this.config_data.daemons &&
+          this.config_data.daemons[net] &&
+          this.config_data.daemons[net].type === "local_remote"
+        ) {
+          this.config_data.daemons[net].type = "remote";
+        }
+      }
+
       // save config file back to file, so updated options are stored on disk
       fs.writeFile(
         this.config_file,
@@ -481,6 +496,10 @@ export class Backend {
             console.log(`[Backend] Created missing directory: ${dir}`);
           } catch (e) {
             console.error(`[Backend] Failed to create directory: ${dir}`, e);
+            this.sendLog(
+              "error",
+              `Failed to create directory: ${dir} — ${e.message}`
+            );
             this.send("show_notification", {
               type: "negative",
               message: `Failed to create directory: ${dir}`,
@@ -520,6 +539,8 @@ export class Backend {
       this.daemon = new Daemon(this);
       this.walletd = new WalletRPC(this);
 
+      this.sendLog("info", "Backend initialized, starting daemon...");
+
       this.send("set_app_data", {
         status: {
           code: 3 // Starting daemon
@@ -544,35 +565,25 @@ export class Backend {
               "[Backend] Error checking remote daemon:",
               data.error
             );
-            // If we can default to local then we do so, otherwise we tell the user  to re-set the node
-            if (config_daemon.type === "local_remote") {
-              this.config_data.daemons[net_type].type = "local";
-              this.send("set_app_data", {
-                config: this.config_data,
-                pending_config: this.config_data
-              });
-              this.send("show_notification", {
-                type: "warning",
-                textColor: "black",
-                i18n: "notification.warnings.usingLocalNode",
-                timeout: 2000
-              });
-            } else {
-              this.send("show_notification", {
-                type: "negative",
-                text: `Cannot access remote node: ${data.error.message ||
-                  "Connection failed"}`,
-                timeout: 5000
-              });
+            this.sendLog(
+              "error",
+              `Remote daemon check failed: ${data.error.message ||
+                JSON.stringify(data.error)}`
+            );
+            this.send("show_notification", {
+              type: "negative",
+              text: `Cannot access remote node: ${data.error.message ||
+                "Connection failed"}`,
+              timeout: 5000
+            });
 
-              // Go back to config
-              this.send("set_app_data", {
-                status: {
-                  code: -1 // Return to config screen
-                }
-              });
-              return;
-            }
+            // Go back to config so user can pick a different node
+            this.send("set_app_data", {
+              status: {
+                code: -1
+              }
+            });
+            return;
           }
 
           // If we got a net type back then check if ours match
@@ -642,6 +653,10 @@ export class Backend {
                 })
                 .catch(error => {
                   console.error("[Backend] Error starting wallet RPC:", error);
+                  this.sendLog(
+                    "error",
+                    `Error starting wallet RPC: ${error.message || error}`
+                  );
                   this.send("show_notification", {
                     type: "negative",
                     text: `Error starting wallet RPC: ${error.message ||
@@ -656,6 +671,10 @@ export class Backend {
                 })
                 .catch(error => {
                   console.error("[Backend] Error starting daemon:", error);
+                  this.sendLog(
+                    "error",
+                    `Error starting daemon: ${error.message || error}`
+                  );
                   this.send("show_notification", {
                     type: "negative",
                     text: `Error starting daemon: ${error.message || error}`,
@@ -671,6 +690,10 @@ export class Backend {
                   console.error(
                     "[Backend] Error checking daemon version:",
                     error
+                  );
+                  this.sendLog(
+                    "error",
+                    `Error checking daemon version: ${error.message || error}`
                   );
                   this.send("show_notification", {
                     type: "negative",
@@ -689,6 +712,10 @@ export class Backend {
         })
         .catch(error => {
           console.error("[Backend] Error in checkRemote promise:", error);
+          this.sendLog(
+            "error",
+            `Error connecting to remote daemon: ${error.message || error}`
+          );
           this.send("show_notification", {
             type: "negative",
             text: `Error connecting to remote daemon: ${error.message ||

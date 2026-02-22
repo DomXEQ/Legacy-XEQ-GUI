@@ -61,3 +61,11 @@ export const set_ons_status = (state, data) => {
 export const set_update_required = (state, data) => {
   state.update_required = data;
 };
+
+export const push_session_log = (state, entry) => {
+  const MAX_LOGS = 500;
+  state.session_logs = [
+    ...state.session_logs,
+    { ...entry, timestamp: entry.timestamp || Date.now() }
+  ].slice(-MAX_LOGS);
+};

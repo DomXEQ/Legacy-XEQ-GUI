@@ -37,7 +37,6 @@ export default {
       hardware_wallet: false,
       accrued_balance: 0,
       accrued_balance_next_payout: 0
-
     },
     secret: {
       mnemonic: "",
@@ -147,5 +146,6 @@ export default {
       fetching: true
     }
   },
-  update_required: false
+  update_required: false,
+  session_logs: []
 };

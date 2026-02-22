@@ -71,6 +71,10 @@
         <div v-if="page === 'language'">
           <LanguageSelect />
         </div>
+
+        <div v-if="page === 'troubleshooting'">
+          <SettingsTroubleshooting />
+        </div>
       </q-page-container>
     </q-layout>
   </q-dialog>
@@ -80,12 +84,14 @@
 import { mapState } from "vuex";
 import SettingsGeneral from "components/settings_general";
 import LanguageSelect from "components/language_select";
+import SettingsTroubleshooting from "components/settings_troubleshooting";
 
 export default {
   name: "SettingsModal",
   components: {
     LanguageSelect,
-    SettingsGeneral
+    SettingsGeneral,
+    SettingsTroubleshooting
   },
   data() {
     return {
@@ -110,6 +116,11 @@ export default {
           label: this.$t("titles.settings.tabs.language"),
           value: "language",
           icon: "language"
+        },
+        {
+          label: this.$t("titles.settings.tabs.troubleshooting"),
+          value: "troubleshooting",
+          icon: "bug_report"
         }
       ];
       if (daemons[app.net_type].type != "remote") {
