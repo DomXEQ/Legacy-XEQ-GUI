@@ -18,9 +18,9 @@ jobs:
         run: |
           mkdir -p bin
           echo "=== Downloading EquilibriaCC v22.0.1 Linux release ==="
-          wget -q https://github.com/EquilibriaCC/equilibria-wallet/releases/download/v22.0.1/EquilibriaCC-Wallet.22.0.1.linux.x64.tar.xz -O wallet.tar.xz
+          wget -q https://github.com/EquilibriaCC/equilibria-wallet/releases/download/v22.0.1/EquilibriaCC-Wallet.22.0.1.linux.x64.tar.xv -O wallet.tar.xz
           echo "=== Extracting archive ==="
-          tar xf wallet.tar.xz
+          tar xf wallet.tar.xz || xz -d wallet.tar.xz && tar xf wallet.tar 2>/dev/null || true
           echo "=== Listing extracted contents ==="
           find . -maxdepth 4 -name "xeq-*" -o -name "wallet-cli" -o -name "daemon" | head -20
           echo "=== Searching for binaries ==="
