@@ -236,8 +236,14 @@ export class WalletRPC {
           rpcPath = path.join(__ryo_bin, "xeq-wallet-rpc");
         }
 
-        // Check if the rpc exists
+        this.backend.sendLog("info", `Looking for wallet-rpc at: ${rpcPath}`);
+        this.backend.sendLog(
+          "info",
+          `Binary directory (__ryo_bin): ${__ryo_bin}`
+        );
+
         if (!fs.existsSync(rpcPath)) {
+          this.backend.sendLog("error", `wallet-rpc NOT FOUND at: ${rpcPath}`);
           reject(
             new Error(
               "Failed to find Equilibria Wallet RPC. Please make sure your anti-virus has not removed it."
@@ -245,6 +251,7 @@ export class WalletRPC {
           );
           return;
         }
+        this.backend.sendLog("info", `wallet-rpc found at: ${rpcPath}`);
 
         this.rpcPath = rpcPath;
         this.backend.sendLog(
@@ -273,6 +280,41 @@ export class WalletRPC {
                   height = null;
                 let isRPCSyncing = false;
                 for (const line of lines) {
+                  const trimmed = line.trim();
+                  if (trimmed.length === 0) continue;
+
+                  // Forward wallet-rpc process output to troubleshooting logs
+                  // Parse log level from lines like "2026-02-23 15:39:42.710 E ..."
+                  const levelMatch = trimmed.match(
+                    /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+\s+([EWID])\s+/
+                  );
+                  if (levelMatch) {
+                    const lvl = levelMatch[1];
+                    const logLevel =
+                      lvl === "E" ? "error" : lvl === "W" ? "warn" : "info";
+                    this.backend.sendLog(logLevel, `[wallet-rpc] ${trimmed}`);
+                  } else if (
+                    trimmed.includes("Equilibria") ||
+                    trimmed.includes("THROW EXCEPTION") ||
+                    trimmed.includes("Logging to") ||
+                    trimmed.includes("Binding on") ||
+                    trimmed.includes("wallet RPC server") ||
+                    trimmed.includes("Loaded wallet") ||
+                    trimmed.includes("Received money") ||
+                    trimmed.includes("Spent money") ||
+                    trimmed.includes("Error") ||
+                    trimmed.includes("error")
+                  ) {
+                    const isErr =
+                      trimmed.includes("THROW EXCEPTION") ||
+                      trimmed.includes("Error") ||
+                      trimmed.includes("error");
+                    this.backend.sendLog(
+                      isErr ? "error" : "info",
+                      `[wallet-rpc] ${trimmed}`
+                    );
+                  }
+
                   for (const regex of this.height_regexes) {
                     match = line.match(regex.string);
                     if (match) {
@@ -298,11 +340,19 @@ export class WalletRPC {
                   });
                 }
               });
-              this.walletRPCProcess.on("error", err =>
-                process.stderr.write(`Wallet: ${err}`)
-              );
+              this.walletRPCProcess.on("error", err => {
+                process.stderr.write(`Wallet: ${err}`);
+                this.backend.sendLog(
+                  "error",
+                  `[wallet-rpc] Process error: ${err}`
+                );
+              });
               this.walletRPCProcess.on("close", code => {
                 process.stderr.write(`Wallet: exited with code ${code} \n`);
+                this.backend.sendLog(
+                  "warn",
+                  `[wallet-rpc] Process exited with code ${code}`
+                );
                 this.walletRPCProcess = null;
                 this.agent.destroy();
                 if (code === null) {
@@ -2605,6 +2655,39 @@ export class WalletRPC {
           height = null;
         let isRPCSyncing = false;
         for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.length === 0) continue;
+
+          const levelMatch = trimmed.match(
+            /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+\s+([EWID])\s+/
+          );
+          if (levelMatch) {
+            const lvl = levelMatch[1];
+            const logLevel =
+              lvl === "E" ? "error" : lvl === "W" ? "warn" : "info";
+            this.backend.sendLog(logLevel, `[wallet-rpc] ${trimmed}`);
+          } else if (
+            trimmed.includes("Equilibria") ||
+            trimmed.includes("THROW EXCEPTION") ||
+            trimmed.includes("Logging to") ||
+            trimmed.includes("Binding on") ||
+            trimmed.includes("wallet RPC server") ||
+            trimmed.includes("Loaded wallet") ||
+            trimmed.includes("Received money") ||
+            trimmed.includes("Spent money") ||
+            trimmed.includes("Error") ||
+            trimmed.includes("error")
+          ) {
+            const isErr =
+              trimmed.includes("THROW EXCEPTION") ||
+              trimmed.includes("Error") ||
+              trimmed.includes("error");
+            this.backend.sendLog(
+              isErr ? "error" : "info",
+              `[wallet-rpc] ${trimmed}`
+            );
+          }
+
           for (const regex of this.height_regexes) {
             match = line.match(regex.string);
             if (match) {
@@ -2621,11 +2704,16 @@ export class WalletRPC {
           this.sendGateway("set_wallet_data", { info: { height } });
         }
       });
-      this.walletRPCProcess.on("error", err =>
-        process.stderr.write(`Wallet: ${err}`)
-      );
+      this.walletRPCProcess.on("error", err => {
+        process.stderr.write(`Wallet: ${err}`);
+        this.backend.sendLog("error", `[wallet-rpc] Process error: ${err}`);
+      });
       this.walletRPCProcess.on("close", code => {
         process.stderr.write(`Wallet: exited with code ${code} \n`);
+        this.backend.sendLog(
+          "warn",
+          `[wallet-rpc] Process exited with code ${code}`
+        );
         this.walletRPCProcess = null;
         if (this.agent) this.agent.destroy();
       });

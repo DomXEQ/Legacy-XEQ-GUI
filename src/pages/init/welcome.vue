@@ -17,15 +17,29 @@
 
       <q-step :name="2" :title="$t('titles.configure')">
         <SettingsGeneral ref="settingsGeneral" :randomise-remote="true" />
+        <div class="q-mt-lg text-center">
+          <q-btn
+            flat
+            icon="bug_report"
+            color="grey-6"
+            label="Troubleshooting Logs"
+            @click="showLogs = true"
+          />
+        </div>
       </q-step>
     </q-stepper>
 
-    <q-footer v-if="!(step === 1)" class="no-shadow q-pa-sm">
-      <div class="row justify-end">
-        <div>
+    <q-footer class="no-shadow q-pa-sm">
+      <div class="row justify-between items-center">
+        <q-btn
+          flat
+          icon="bug_report"
+          color="grey-6"
+          label="Logs"
+          @click="showLogs = true"
+        />
+        <div v-if="!(step === 1)" class="row">
           <q-btn flat :label="$t('buttons.back')" @click="clickPrev()" />
-        </div>
-        <div>
           <q-btn
             class="q-ml-sm"
             color="primary"
@@ -35,6 +49,18 @@
         </div>
       </div>
     </q-footer>
+
+    <q-dialog v-model="showLogs" maximized>
+      <q-card dark class="bg-dark">
+        <q-toolbar class="bg-dark">
+          <q-toolbar-title>Troubleshooting</q-toolbar-title>
+          <q-btn flat round icon="close" @click="showLogs = false" />
+        </q-toolbar>
+        <q-card-section>
+          <SettingsTroubleshooting />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -43,16 +69,19 @@ import { version } from "../../../package.json";
 import { mapState } from "vuex";
 import LanguageSelect from "components/language_select";
 import SettingsGeneral from "components/settings_general";
+import SettingsTroubleshooting from "components/settings_troubleshooting";
 
 export default {
   components: {
     LanguageSelect,
-    SettingsGeneral
+    SettingsGeneral,
+    SettingsTroubleshooting
   },
   data() {
     return {
       step: 1,
-      version: ""
+      version: "",
+      showLogs: false
     };
   },
   beforeMount() {

@@ -37,10 +37,9 @@ export class Daemon {
         if (!fs.existsSync(xeqd_path)) {
           console.log(`[Daemon] xeq-d not found at: ${xeqd_path}`);
           console.log(`[Daemon] __ryo_bin is: ${__ryo_bin}`);
-          console.log(
-            `[Daemon] Checking if bin directory exists: ${fs.existsSync(
-              __ryo_bin
-            )}`
+          this.backend.sendLog(
+            "warn",
+            `xeq-d not found at: ${xeqd_path} (bin dir: ${__ryo_bin})`
           );
           resolve(false);
           return;
@@ -59,6 +58,10 @@ export class Daemon {
         let xeqd_version_cmd = `"${xeqd_path}" --version`;
         if (!fs.existsSync(xeqd_path)) {
           console.log(`[Daemon] xeq-d not found at: ${xeqd_path}`);
+          this.backend.sendLog(
+            "warn",
+            `xeq-d not found at: ${xeqd_path} (bin dir: ${__ryo_bin})`
+          );
           resolve(false);
           return;
         }
@@ -228,14 +231,49 @@ export class Daemon {
               );
             }
 
-            this.daemonProcess.stdout.on("data", data =>
-              process.stdout.write(`Daemon: ${data}`)
-            );
-            this.daemonProcess.on("error", err =>
-              process.stderr.write(`Daemon: ${err}`)
-            );
+            this.daemonProcess.stdout.on("data", data => {
+              process.stdout.write(`Daemon: ${data}`);
+              let lines = data.toString().split("\n");
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.length === 0) continue;
+                const levelMatch = trimmed.match(
+                  /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+\s+([EWID])\s+/
+                );
+                if (levelMatch) {
+                  const lvl = levelMatch[1];
+                  const logLevel =
+                    lvl === "E" ? "error" : lvl === "W" ? "warn" : "info";
+                  this.backend.sendLog(logLevel, `[daemon] ${trimmed}`);
+                } else if (
+                  trimmed.includes("Equilibria") ||
+                  trimmed.includes("Error") ||
+                  trimmed.includes("error") ||
+                  trimmed.includes("THROW EXCEPTION") ||
+                  trimmed.includes("Synchronized") ||
+                  trimmed.includes("Binding on")
+                ) {
+                  const isErr =
+                    trimmed.includes("Error") ||
+                    trimmed.includes("error") ||
+                    trimmed.includes("THROW EXCEPTION");
+                  this.backend.sendLog(
+                    isErr ? "error" : "info",
+                    `[daemon] ${trimmed}`
+                  );
+                }
+              }
+            });
+            this.daemonProcess.on("error", err => {
+              process.stderr.write(`Daemon: ${err}`);
+              this.backend.sendLog("error", `[daemon] Process error: ${err}`);
+            });
             this.daemonProcess.on("close", code => {
               process.stderr.write(`Daemon: exited with code ${code} \n`);
+              this.backend.sendLog(
+                "warn",
+                `[daemon] Process exited with code ${code}`
+              );
               this.daemonProcess = null;
               this.agent.destroy();
               if (code === null) {

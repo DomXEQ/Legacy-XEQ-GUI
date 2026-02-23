@@ -394,6 +394,11 @@ export class Backend {
       defaults: this.defaults
     });
 
+    this.sendLog("info", `Platform: ${os.platform()}, arch: ${os.arch()}`);
+    this.sendLog("info", `Config dir: ${this.config_dir}`);
+    this.sendLog("info", `Wallet dir: ${this.wallet_dir}`);
+    this.sendLog("info", `Working dir: ${process.cwd()}`);
+
     this.checkVersion();
 
     fs.readFile(this.config_file, "utf8", (err, data) => {
@@ -572,7 +577,7 @@ export class Backend {
             );
             this.send("show_notification", {
               type: "negative",
-              text: `Cannot access remote node: ${data.error.message ||
+              message: `Cannot access remote node: ${data.error.message ||
                 "Connection failed"}`,
               timeout: 5000
             });
@@ -659,7 +664,7 @@ export class Backend {
                   );
                   this.send("show_notification", {
                     type: "negative",
-                    text: `Error starting wallet RPC: ${error.message ||
+                    message: `Error starting wallet RPC: ${error.message ||
                       error}`,
                     timeout: 5000
                   });
@@ -677,7 +682,7 @@ export class Backend {
                   );
                   this.send("show_notification", {
                     type: "negative",
-                    text: `Error starting daemon: ${error.message || error}`,
+                    message: `Error starting daemon: ${error.message || error}`,
                     timeout: 5000
                   });
                   this.send("set_app_data", {
@@ -697,7 +702,7 @@ export class Backend {
                   );
                   this.send("show_notification", {
                     type: "negative",
-                    text: `Error checking daemon version: ${error.message ||
+                    message: `Error checking daemon version: ${error.message ||
                       error}`,
                     timeout: 5000
                   });
@@ -718,7 +723,7 @@ export class Backend {
           );
           this.send("show_notification", {
             type: "negative",
-            text: `Error connecting to remote daemon: ${error.message ||
+            message: `Error connecting to remote daemon: ${error.message ||
               error}`,
             timeout: 5000
           });

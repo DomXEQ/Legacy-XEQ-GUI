@@ -144,28 +144,55 @@
       <div class="absolute-bottom">
         <div class="row items-center justify-between q-pa-md">
           <div>{{ version }}</div>
-          <q-btn
-            v-if="status.code >= 1 && status.code <= 7"
-            flat
-            color="primary"
-            icon="settings"
-            :label="$t('buttons.settings')"
-            class="settings-button"
-            @click="goToSettings"
-          />
+          <div>
+            <q-btn
+              flat
+              icon="bug_report"
+              color="grey-6"
+              label="Troubleshooting Logs"
+              class="q-mr-sm"
+              @click="showLogs = true"
+            />
+            <q-btn
+              v-if="status.code >= 1 && status.code <= 7"
+              flat
+              color="primary"
+              icon="settings"
+              :label="$t('buttons.settings')"
+              class="settings-button"
+              @click="goToSettings"
+            />
+          </div>
         </div>
       </div>
     </div>
+
+    <q-dialog v-model="showLogs" maximized>
+      <q-card dark class="bg-dark">
+        <q-toolbar class="bg-dark">
+          <q-toolbar-title>Troubleshooting</q-toolbar-title>
+          <q-btn flat round icon="close" @click="showLogs = false" />
+        </q-toolbar>
+        <q-card-section>
+          <SettingsTroubleshooting />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script>
 import { mapState } from "vuex";
+import SettingsTroubleshooting from "components/settings_troubleshooting";
 export default {
+  components: {
+    SettingsTroubleshooting
+  },
   data() {
     return {
       message: "",
-      version: ""
+      version: "",
+      showLogs: false
     };
   },
   computed: mapState({
