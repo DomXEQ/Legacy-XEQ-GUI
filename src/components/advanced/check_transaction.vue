@@ -7,7 +7,7 @@
       <div>
         <OxenField
           :label="$t('fieldLabels.transactionId')"
-          :error="$v.txid.$error"
+          :error="v$.txid.$error"
         >
           <q-input
             v-model.trim="txid"
@@ -15,13 +15,13 @@
             :placeholder="$t('placeholders.pasteTransactionId')"
             borderless
             dense
-            @blur="$v.txid.$touch"
+            @blur="v$.txid.$touch"
           />
         </OxenField>
         <OxenField
           class="q-mt-md"
           :label="$t('fieldLabels.address')"
-          :error="$v.address.$error"
+          :error="v$.address.$error"
           optional
         >
           <q-input
@@ -30,7 +30,7 @@
             :placeholder="$t('placeholders.recipientWalletAddress')"
             borderless
             dense
-            @blur="$v.address.$touch"
+            @blur="v$.address.$touch"
           />
         </OxenField>
         <OxenField class="q-mt-md" :label="$t('fieldLabels.message')" optional>
@@ -45,7 +45,7 @@
         <OxenField
           class="q-mt-md"
           :label="$t('fieldLabels.signature')"
-          :error="$v.signature.$error"
+          :error="v$.signature.$error"
         >
           <q-input
             v-model.trim="signature"
@@ -105,13 +105,14 @@
 
 <script>
 import { mapState } from "vuex";
-import { required } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required } from "@vuelidate/validators";
 import { address } from "src/validators/common";
-import { i18n } from "boot/i18n";
 import OxenField from "components/oxen_field";
 import FormatOxen from "components/format_oxen";
 
 export default {
+  setup() { return { v$: useVuelidate() }; },
   name: "CheckTransaction",
   components: {
     OxenField,
@@ -125,22 +126,27 @@ export default {
       signature: ""
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    status: state => state.gateway.check_transaction_status,
-    canClear() {
-      return (
-        this.txid !== "" ||
-        this.address !== "" ||
-        this.message !== "" ||
-        this.signature != ""
-      );
-    },
-    validTransaction() {
-      let key = this.status.state.good ? "yes" : "no";
-      return i18n.t(`strings.checkTransaction.validTransaction.${key}`);
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      status: state => state.gateway.check_transaction_status,
+      canClear() {
+        return (
+          this.txid !== "" ||
+          this.address !== "" ||
+          this.message !== "" ||
+          this.signature != ""
+        );
+      },
+      validTransaction() {
+        let key = this.status.state.good ? "yes" : "no";
+        return this.$t(`strings.checkTransaction.validTransaction.${key}`);
+      }
+    }),
+    checkTxStatusCode() {
+      return this.status ? this.status.code : 0;
     }
-  }),
+  },
   validations: {
     txid: { required },
     address: {
@@ -157,30 +163,26 @@ export default {
     signature: { required }
   },
   watch: {
-    status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case -1:
-            this.$q.notify({
-              type: "negative",
-              timeout: 3000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+    checkTxStatusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case -1:
+          this.$q.notify({
+            type: "negative",
+            timeout: 3000,
+            message: this.status.message || ""
+          });
+          break;
+      }
     }
   },
   methods: {
     check() {
-      this.$v.txid.$touch();
-      this.$v.address.$touch();
-      this.$v.signature.$touch();
+      this.v$.txid.$touch();
+      this.v$.address.$touch();
+      this.v$.signature.$touch();
 
-      if (this.$v.txid.$error) {
+      if (this.v$.txid.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -189,7 +191,7 @@ export default {
         return;
       }
 
-      if (this.$v.signature.$error) {
+      if (this.v$.signature.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -198,7 +200,7 @@ export default {
         return;
       }
 
-      if (this.$v.address.$error) {
+      if (this.v$.address.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -219,7 +221,7 @@ export default {
       this.address = "";
       this.message = "";
       this.signature = "";
-      this.$v.$reset();
+      this.v$.$reset();
     }
   }
 };

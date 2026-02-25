@@ -9,10 +9,10 @@ import {
   shell,
   session
 } from "electron";
-import { version, productName } from "../../package.json";
-import { Backend } from "./modules/backend";
-import { checkForUpdate } from "./auto-updater";
-import menuTemplate from "./menu";
+import { version, productName } from "../package.json";
+import { Backend } from "./main-process/modules/backend";
+import { checkForUpdate } from "./main-process/auto-updater";
+import menuTemplate from "./main-process/menu";
 const portscanner = require("portscanner");
 const windowStateKeeper = require("electron-window-state");
 const path = require("upath");
@@ -102,7 +102,10 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
-      preload: path.resolve(__dirname, "electron-preload.js")
+      preload: path.join(
+        process.env.QUASAR_ELECTRON_PRELOAD_FOLDER,
+        "electron-preload" + process.env.QUASAR_ELECTRON_PRELOAD_EXTENSION
+      )
     }
   });
 
@@ -250,21 +253,23 @@ if (!gotTheLock) {
       callback(false);
     });
 
-    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          "Content-Security-Policy": [
-            "default-src 'self'; " +
-              "script-src 'self'; " +
-              "style-src 'self' 'unsafe-inline'; " +
-              "font-src 'self' data:; " +
-              "connect-src 'self' ws://127.0.0.1:*; " +
-              "img-src 'self' data:"
-          ]
-        }
+    if (process.env.PROD) {
+      session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+        callback({
+          responseHeaders: {
+            ...details.responseHeaders,
+            "Content-Security-Policy": [
+              "default-src 'self'; " +
+                "script-src 'self'; " +
+                "style-src 'self' 'unsafe-inline'; " +
+                "font-src 'self' data:; " +
+                "connect-src 'self' ws://127.0.0.1:*; " +
+                "img-src 'self' data:"
+            ]
+          }
+        });
       });
-    });
+    }
 
     checkForUpdate(
       () => mainWindow,

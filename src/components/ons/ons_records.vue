@@ -4,7 +4,7 @@
       <OxenField
         :label="$t('fieldLabels.decryptRecord')"
         :disable="decrypting"
-        :error="$v.name.$error"
+        :error="v$.name.$error"
       >
         <q-input
           v-model.trim="name"
@@ -13,7 +13,7 @@
           dense
           :placeholder="$t('placeholders.onsDecryptName')"
           :disable="decrypting"
-          @blur="$v.name.$touch"
+          @blur="v$.name.$touch"
         />
       </OxenField>
       <div class="btn-wrapper q-ml-md row items-center">
@@ -60,10 +60,12 @@
 <script>
 import { mapState } from "vuex";
 import OxenField from "components/oxen_field";
+import { useVuelidate } from "@vuelidate/core";
 import { session_name_or_lokinet_name } from "src/validators/common";
 import ONSRecordList from "./ons_record_list";
 
 export default {
+  setup() { return { v$: useVuelidate() }; },
   name: "ONSRecords",
   components: {
     OxenField,
@@ -139,7 +141,7 @@ export default {
       this.$emit("onRenew", record);
     },
     decrypt() {
-      this.$v.name.$touch();
+      this.v$.name.$touch();
 
       if (!this.name || this.name.trim().length === 0) {
         this.$q.notify({
@@ -150,7 +152,7 @@ export default {
         return;
       }
 
-      if (this.$v.name.$error) {
+      if (this.v$.name.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 3000,

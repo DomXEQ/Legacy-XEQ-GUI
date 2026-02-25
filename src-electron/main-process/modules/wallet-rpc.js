@@ -1,6 +1,5 @@
 import child_process from "child_process";
 
-const request = require("request-promise");
 const queue = require("promise-queue");
 const http = require("http");
 const os = require("os");
@@ -154,8 +153,7 @@ export class WalletRPC {
         ];
 
         const args = [
-          "--rpc-login",
-          this.auth[0] + ":" + this.auth[1],
+          "--disable-rpc-login",
           "--rpc-bind-port",
           options.wallet.rpc_bind_port,
           "--daemon-address",
@@ -639,7 +637,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       "",
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -732,7 +730,7 @@ export class WalletRPC {
       // For remote wallets, this.auth[2] might be null, so generate a salt if needed
       const salt = this.getPasswordSalt();
       this.wallet_state.password_hash = crypto
-        .pbkdf2Sync(password, salt, 1000, 64, "sha512")
+        .pbkdf2Sync(password, salt, 100000, 64, "sha512")
         .toString("hex");
       this.wallet_state.password = password;
       this.wallet_state.name = filename;
@@ -750,6 +748,8 @@ export class WalletRPC {
     refresh_type,
     refresh_start_timestamp_or_height
   ) {
+    console.log(`[WalletRPC] restoreWallet ENTRY: name="${filename}", type=${refresh_type}, val=${refresh_start_timestamp_or_height}`);
+    this.backend.sendLog("info", `restoreWallet ENTRY: name="${filename}", type=${refresh_type}`);
     if (refresh_type == "date") {
       // Convert timestamp to 00:00 and move back a day
       // Core code also moved back some amount of blocks
@@ -757,7 +757,11 @@ export class WalletRPC {
       timestamp = timestamp - (timestamp % 86400000) - 86400000;
 
       this.sendGateway("reset_wallet_error");
+      console.log(`[WalletRPC] restoreWallet: calling timestampToHeight(${timestamp})`);
+      this.backend.sendLog("info", `restoreWallet: calling timestampToHeight(${timestamp})`);
       this.backend.daemon.timestampToHeight(timestamp).then(height => {
+        console.log(`[WalletRPC] restoreWallet: timestampToHeight resolved → height=${height}`);
+        this.backend.sendLog("info", `restoreWallet: timestampToHeight → height=${height}`);
         if (height === false) {
           this.sendGateway("set_wallet_error", {
             status: {
@@ -780,6 +784,8 @@ export class WalletRPC {
     seed = seed.trim().replace(/\s{2,}/g, " ");
 
     this.sendGateway("reset_wallet_error");
+    console.log(`[WalletRPC] restoreWallet: calling restore_deterministic_wallet for "${filename}", height=${restore_height}`);
+    this.backend.sendLog("info", `restoreWallet: restore_deterministic_wallet for "${filename}", height=${restore_height}`);
     this.sendRPC("restore_deterministic_wallet", {
       filename,
       password,
@@ -787,15 +793,20 @@ export class WalletRPC {
       restore_height
     }).then(data => {
       if (data.hasOwnProperty("error")) {
+        console.error(`[WalletRPC] restoreWallet: RPC error:`, data.error);
+        this.backend.sendLog("error", `restoreWallet: RPC error: ${JSON.stringify(data.error)}`);
         this.sendGateway("set_wallet_error", { status: data.error });
         return;
       }
+
+      console.log(`[WalletRPC] restoreWallet: success, finalizing wallet "${filename}"`);
+      this.backend.sendLog("info", `restoreWallet: restore_deterministic_wallet succeeded for "${filename}"`);
 
       // store hash of the password so we can check against it later when requesting private keys, or for sending txs
       // For remote wallets, this.auth[2] might be null, so generate a salt if needed
       const salt = this.getPasswordSalt();
       this.wallet_state.password_hash = crypto
-        .pbkdf2Sync(password, salt, 1000, 64, "sha512")
+        .pbkdf2Sync(password, salt, 100000, 64, "sha512")
         .toString("hex");
       this.wallet_state.password = password;
       this.wallet_state.name = filename;
@@ -863,7 +874,7 @@ export class WalletRPC {
       // For remote wallets, this.auth[2] might be null, so generate a salt if needed
       const salt = this.getPasswordSalt();
       this.wallet_state.password_hash = crypto
-        .pbkdf2Sync(password, salt, 1000, 64, "sha512")
+        .pbkdf2Sync(password, salt, 100000, 64, "sha512")
         .toString("hex");
       this.wallet_state.password = password;
       this.wallet_state.name = filename;
@@ -952,7 +963,7 @@ export class WalletRPC {
           // For remote wallets, this.auth[2] might be null, so generate a salt if needed
           const salt = this.getPasswordSalt();
           this.wallet_state.password_hash = crypto
-            .pbkdf2Sync(password, salt, 1000, 64, "sha512")
+            .pbkdf2Sync(password, salt, 100000, 64, "sha512")
             .toString("hex");
           this.wallet_state.password = password;
           this.wallet_state.name = wallet_name;
@@ -971,6 +982,19 @@ export class WalletRPC {
   }
 
   finalizeNewWallet(filename) {
+    // Start the heartbeat immediately so that status: { code: 0 } is sent to
+    // the UI as soon as the first heartbeat completes (5 s timeout per call).
+    // Previously the heartbeat was only started inside the Promise.all .then(),
+    // meaning that if the wallet-rpc was busy scanning blocks the 6 no-timeout
+    // RPC calls below would block the serial queue and the heartbeat (and
+    // therefore the success signal) would never fire, leaving the loading
+    // spinner stuck indefinitely.
+    if (this.isHardwareWallet(filename)) {
+      this.startHeartbeat(10);
+    } else {
+      this.startHeartbeat();
+    }
+
     Promise.all([
       this.sendRPC("get_address", { account_index: 0 }),
       this.sendRPC("getheight"),
@@ -1039,12 +1063,6 @@ export class WalletRPC {
       });
 
       this.sendGateway("set_wallet_data", wallet);
-
-      if (this.isHardwareWallet(filename)) {
-        this.startHeartbeat(10);
-      } else {
-        this.startHeartbeat();
-      }
     });
   }
 
@@ -1091,7 +1109,7 @@ export class WalletRPC {
       // For remote wallets, this.auth[2] might be null, so generate a salt if needed
       const salt = this.getPasswordSalt();
       this.wallet_state.password_hash = crypto
-        .pbkdf2Sync(password, salt, 1000, 64, "sha512")
+        .pbkdf2Sync(password, salt, 100000, 64, "sha512")
         .toString("hex");
       this.wallet_state.password = password;
       this.wallet_state.name = filename;
@@ -1280,20 +1298,38 @@ export class WalletRPC {
             wallet.info.accrued_balance = this.wallet_state.accrued_balance;
             wallet.info.accrued_balance_next_payout = this.wallet_state.accrued_balance_next_payout;
           }
-          // Always fetch transactions on extended heartbeat so the tx list
-          // is never sent as empty (which would erase the UI list)
-          Promise.all([
-            this.getTransactions(),
-            this.getAddressList(),
-            this.getAddressBook()
-          ]).then(extData => {
-            for (let n of extData) {
-              Object.keys(n).map(key => {
-                wallet[key] = Object.assign(wallet[key] || {}, n[key]);
-              });
-            }
-            this.sendGateway("set_wallet_data", wallet);
-          });
+          // Send wallet data immediately so UI transitions (removes loading spinner).
+          // This is critical in offline mode where daemon is unreachable — the
+          // additional RPC calls below may hang indefinitely without a daemon.
+          this.sendGateway("set_wallet_data", wallet);
+
+          // Fetch transactions/addresses asynchronously with a timeout.
+          // If these fail or timeout, the wallet is still usable.
+          const extTimeout = 10000;
+          Promise.race([
+            Promise.all([
+              this.getTransactions(),
+              this.getAddressList(),
+              this.getAddressBook()
+            ]),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("Extended heartbeat timeout")), extTimeout)
+            )
+          ])
+            .then(extData => {
+              for (let n of extData) {
+                Object.keys(n).map(key => {
+                  wallet[key] = Object.assign(wallet[key] || {}, n[key]);
+                });
+              }
+              this.sendGateway("set_wallet_data", wallet);
+            })
+            .catch(err => {
+              this.backend.sendLog(
+                "warn",
+                `Extended heartbeat skipped: ${err.message || err}`
+              );
+            });
         } else {
           this.closeWallet().then(() => {
             this.sendGateway("set_wallet_error", {
@@ -1433,7 +1469,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -1730,7 +1766,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -1795,7 +1831,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -1873,7 +1909,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -2238,7 +2274,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       cryptoCallback
@@ -2260,7 +2296,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -2332,7 +2368,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -2785,7 +2821,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -3077,7 +3113,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -3153,7 +3189,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -3218,7 +3254,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -3584,7 +3620,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       old_password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -3627,7 +3663,7 @@ export class WalletRPC {
               .toString("hex")
               .substr(0, 32);
           this.wallet_state.password_hash = crypto
-            .pbkdf2Sync(new_password, salt, 1000, 64, "sha512")
+            .pbkdf2Sync(new_password, salt, 100000, 64, "sha512")
             .toString("hex");
 
           this.sendGateway("show_notification", {
@@ -3643,7 +3679,7 @@ export class WalletRPC {
     crypto.pbkdf2(
       password,
       this.getPasswordSalt(),
-      1000,
+      100000,
       64,
       "sha512",
       (err, password_hash) => {
@@ -3725,34 +3761,31 @@ export class WalletRPC {
 
   sendRPC(method, params = {}, timeout = 0) {
     let id = this.id++;
-    let options = {
-      uri: `${this.protocol}${this.hostname}:${this.port}/json_rpc`,
+    const url = `${this.protocol}${this.hostname}:${this.port}/json_rpc`;
+    const body = {
+      jsonrpc: "2.0",
+      id: id,
+      method: method
+    };
+    if (Object.keys(params).length !== 0) {
+      body.params = params;
+    }
+
+    const headers = { "Content-Type": "application/json" };
+
+    const fetchOptions = {
       method: "POST",
-      json: {
-        jsonrpc: "2.0",
-        id: id,
-        method: method
-      },
+      headers,
+      body: JSON.stringify(body),
       agent: this.agent
     };
-
-    // Only add authentication if we have auth credentials (local wallet RPC)
-    if (this.auth[0] && this.auth[1]) {
-      options.auth = {
-        user: this.auth[0],
-        pass: this.auth[1],
-        sendImmediately: false
-      };
-    }
-    if (Object.keys(params).length !== 0) {
-      options.json.params = params;
-    }
     if (timeout > 0) {
-      options.timeout = timeout;
+      fetchOptions.signal = AbortSignal.timeout(timeout);
     }
 
     return this.queue.add(() => {
-      return request(options)
+      return fetch(url, fetchOptions)
+        .then(res => res.json())
         .then(response => {
           if (response.hasOwnProperty("error")) {
             return {
@@ -3793,33 +3826,33 @@ export class WalletRPC {
         return;
       }
 
-      this.closeWallet().then(() => {
-        // normally we would exit wallet after this promise
-        // however if the wallet is not responsive to RPC
-        // requests then we must forcefully close it below
+      // Register process exit handler and absolute force-kill safety net
+      this.walletRPCProcess.on("close", () => {
+        this.agent.destroy();
+        clearTimeout(this.forceKill);
+        resolve();
       });
-      setTimeout(() => {
+
+      this.forceKill = setTimeout(() => {
         if (this.walletRPCProcess) {
-          this.walletRPCProcess.on("close", () => {
-            this.agent.destroy();
-            clearTimeout(this.forceKill);
-            resolve();
-          });
-
-          // Force kill after 20 seconds
-          this.forceKill = setTimeout(() => {
-            if (this.walletRPCProcess) {
-              this.walletRPCProcess.kill("SIGKILL");
-            }
-          }, 20000);
-
-          // Force kill if the rpc is syncing
-          const signal = this.isRPCSyncing ? "SIGKILL" : "SIGTERM";
-          this.walletRPCProcess.kill(signal);
-        } else {
-          resolve();
+          this.walletRPCProcess.kill("SIGKILL");
         }
-      }, 2500);
+      }, 30000);
+
+      // Wait for store + close_wallet to complete, then send SIGTERM for graceful shutdown.
+      // Previously a 2500ms timer fired regardless, killing the process before store
+      // could finish — causing the wallet to lose sync progress and rescan from block 1.
+      this.closeWallet()
+        .then(() => {
+          if (this.walletRPCProcess) {
+            this.walletRPCProcess.kill("SIGTERM");
+          }
+        })
+        .catch(() => {
+          if (this.walletRPCProcess) {
+            this.walletRPCProcess.kill("SIGTERM");
+          }
+        });
     });
   }
 }

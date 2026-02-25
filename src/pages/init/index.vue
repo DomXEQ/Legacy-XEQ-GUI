@@ -232,14 +232,7 @@ export default {
   },
   methods: {
     goToSettings() {
-      // Reset status to allow reconfiguration
-      this.$store.commit("gateway/set_app_data", {
-        status: {
-          code: -1 // Config not found - will trigger welcome screen
-        }
-      });
-      // Navigate back to welcome screen to reconfigure daemon settings
-      this.$router.replace({ path: "/init/welcome?step=2" });
+      this.$router.replace({ path: "/welcome", query: { step: "2" } });
     },
     updateStatus() {
       switch (this.status.code) {
@@ -294,6 +287,13 @@ export default {
           this.$refs.settings.className = "solid";
           this.$refs.daemon.className = "solid";
           this.$refs.wallet.className = "solid";
+          break;
+        case 8: // Offline mode — daemon unreachable, wallet-rpc running
+          this.$refs.backend.className = "solid";
+          this.$refs.settings.className = "solid";
+          this.$refs.daemon.className = "grey";
+          this.$refs.wallet.className = "solid";
+          this.$router.replace({ path: "wallet-select" });
           break;
       }
     }

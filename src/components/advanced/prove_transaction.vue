@@ -4,10 +4,24 @@
       <div class="q-mb-lg tab-desc">
         {{ $t("strings.proveTransactionDescription") }}
       </div>
+      <div
+        class="q-mb-lg confirmation-note"
+        style="
+          padding: 10px 14px;
+          background: rgba(255, 170, 0, 0.12);
+          border: 1px solid rgba(255, 170, 0, 0.3);
+          border-radius: 8px;
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.9);
+        "
+      >
+        <q-icon name="schedule" size="18px" class="q-mr-sm" style="vertical-align: middle;" />
+        {{ $t("strings.proveTransactionConfirmationNote") }}
+      </div>
       <div>
         <OxenField
           :label="$t('fieldLabels.transactionId')"
-          :error="$v.txid.$error"
+          :error="v$.txid.$error"
         >
           <q-input
             v-model.trim="txid"
@@ -15,13 +29,13 @@
             :placeholder="$t('placeholders.pasteTransactionId')"
             borderless
             dense
-            @blur="$v.txid.$touch"
+            @blur="v$.txid.$touch"
           />
         </OxenField>
         <OxenField
           class="q-mt-md"
           label="RECEIVING ADDRESS"
-          :error="$v.address.$error"
+          :error="v$.address.$error"
         >
           <q-input
             v-model.trim="address"
@@ -29,7 +43,7 @@
             :placeholder="$t('placeholders.recipientWalletAddress')"
             borderless
             dense
-            @blur="$v.address.$touch"
+            @blur="v$.address.$touch"
           />
         </OxenField>
         <!-- New XEQ Mainnet only: message field hidden for Legacy XEQ swap
@@ -110,12 +124,13 @@
 
 <script>
 import { mapState } from "vuex";
-import { required } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required } from "@vuelidate/validators";
 import { address } from "src/validators/common";
 import OxenField from "components/oxen_field";
-import { clipboard } from "electron";
 
 export default {
+  setup() { return { v$: useVuelidate() }; },
   name: "ProveTransaction",
   components: {
     OxenField
@@ -127,13 +142,18 @@ export default {
       message: ""
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    status: state => state.gateway.prove_transaction_status,
-    canClear() {
-      return this.txid !== "" || this.address !== "" || this.message !== "";
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      status: state => state.gateway.prove_transaction_status,
+      canClear() {
+        return this.txid !== "" || this.address !== "" || this.message !== "";
+      }
+    }),
+    proveTxStatusCode() {
+      return this.status ? this.status.code : 0;
     }
-  }),
+  },
   watch: {
     "$route.query": {
       handler() {
@@ -141,21 +161,17 @@ export default {
       },
       deep: true
     },
-    status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case -1:
-            this.$q.notify({
-              type: "negative",
-              timeout: 3000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+    proveTxStatusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case -1:
+          this.$q.notify({
+            type: "negative",
+            timeout: 3000,
+            message: this.status.message || ""
+          });
+          break;
+      }
     }
   },
   mounted() {
@@ -184,7 +200,7 @@ export default {
       this.txid = "";
       this.address = "";
       this.message = "";
-      this.$v.$reset();
+      this.v$.$reset();
       this.$store.commit("gateway/set_prove_transaction_status", {
         code: 0,
         message: "",
@@ -197,10 +213,10 @@ export default {
       }
     },
     generate() {
-      this.$v.txid.$touch();
-      this.$v.address.$touch();
+      this.v$.txid.$touch();
+      this.v$.address.$touch();
 
-      if (this.$v.txid.$error) {
+      if (this.v$.txid.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -209,7 +225,7 @@ export default {
         return;
       }
 
-      if (this.$v.address.$error) {
+      if (this.v$.address.$error) {
         const msg =
           this.address === ""
             ? "Please enter the receiving wallet address"
@@ -232,10 +248,10 @@ export default {
       this.txid = "";
       this.address = "";
       this.message = "";
-      this.$v.$reset();
+      this.v$.$reset();
     },
     copy() {
-      clipboard.writeText(this.status.state.signature);
+      window.electronAPI.copyToClipboard(this.status.state.signature);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

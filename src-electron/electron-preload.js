@@ -1,5 +1,5 @@
 const { contextBridge, ipcRenderer } = require("electron");
-const { SCEE } = require("./modules/SCEE-Node");
+const { SCEE } = require("./main-process/modules/SCEE-Node");
 
 const scee = new SCEE();
 

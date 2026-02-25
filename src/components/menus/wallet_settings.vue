@@ -5,44 +5,45 @@
       :label="$t('buttons.settings')"
       size="md"
       flat
+      style="cursor: pointer"
     >
-      <q-menu anchor="bottom right" self="top right">
+      <q-menu ref="settingsMenu" anchor="bottom right" self="top right">
         <q-list separator class="menu-list">
           <q-item
-            v-close-popup
             clickable
-            :disabled="!is_ready"
-            @click.native="getPrivateKeys()"
+            v-ripple
+            :class="{ 'text-grey-6': !is_ready }"
+            @click="is_ready && (closeMenu(), getPrivateKeys())"
           >
             <q-item-label header>{{
               $t("menuItems.showPrivateKeys")
             }}</q-item-label>
           </q-item>
           <q-item
-            v-close-popup
             clickable
-            :disabled="!is_ready"
-            @click.native="showModal('change_password')"
+            v-ripple
+            :class="{ 'text-grey-6': !is_ready }"
+            @click="is_ready && (closeMenu(), showModal('change_password'))"
           >
             <q-item-label header>{{
               $t("menuItems.changePassword")
             }}</q-item-label>
           </q-item>
           <q-item
-            v-close-popup
             clickable
-            :disabled="!is_ready"
-            @click.native="showModal('export_transfers')"
+            v-ripple
+            :class="{ 'text-grey-6': !is_ready }"
+            @click="is_ready && (closeMenu(), showModal('export_transfers'))"
           >
             <q-item-label header>{{
               $t("menuItems.exportTransfers")
             }}</q-item-label>
           </q-item>
           <q-item
-            v-close-popup
             clickable
-            :disabled="!is_ready"
-            @click.native="showModal('rescan')"
+            v-ripple
+            :class="{ 'text-grey-6': !is_ready }"
+            @click="is_ready && (closeMenu(), showModal('rescan'))"
           >
             <q-item-label header>{{
               $t("menuItems.rescanWallet")
@@ -51,27 +52,28 @@
           <q-item
             v-close-popup
             clickable
-            @click.native="refreshWalletConnection()"
+            v-ripple
+            @click="refreshWalletConnection()"
           >
             <q-item-label header>{{
               $t("menuItems.refreshConnection") || "Refresh RPC Connection"
             }}</q-item-label>
           </q-item>
           <q-item
-            v-close-popup
             clickable
-            :disabled="!is_ready"
-            @click.native="showModal('key_image')"
+            v-ripple
+            :class="{ 'text-grey-6': !is_ready }"
+            @click="is_ready && (closeMenu(), showModal('key_image'))"
           >
             <q-item-label header>{{
               $t("menuItems.manageKeyImages")
             }}</q-item-label>
           </q-item>
           <q-item
-            v-close-popup
             clickable
-            :disabled="!is_ready"
-            @click.native="deleteWallet()"
+            v-ripple
+            :class="{ 'text-grey-6': !is_ready }"
+            @click="is_ready && (closeMenu(), deleteWallet())"
           >
             <q-item-label header>{{
               $t("menuItems.deleteWallet")
@@ -428,7 +430,6 @@
 </template>
 
 <script>
-const { clipboard } = require("electron");
 import { mapState } from "vuex";
 import WalletPassword from "src/mixins/wallet_password";
 import OxenField from "components/oxen_field";
@@ -510,7 +511,7 @@ export default {
     }
   },
   created() {
-    const path = require("upath");
+    const path = { join: (...parts) => parts.join("/").replace(/[/\\]+/g, "/") };
     this.modals.key_image.export_path = path.join(
       this.wallet_data_dir,
       "images",
@@ -529,6 +530,9 @@ export default {
     );
   },
   methods: {
+    closeMenu() {
+      this.$refs.settingsMenu && this.$refs.settingsMenu.hide();
+    },
     showModal(which) {
       if (!this.is_ready) return;
       this.modals[which].visible = true;
@@ -538,9 +542,10 @@ export default {
     },
     copyPrivateKey(type, event) {
       event.stopPropagation();
-      for (let i = 0; i < event.path.length; i++) {
-        if (event.path[i].tagName == "BUTTON") {
-          event.path[i].blur();
+      const path = event.composedPath ? event.composedPath() : event.path || [];
+      for (let i = 0; i < path.length; i++) {
+        if (path[i].tagName == "BUTTON") {
+          path[i].blur();
           break;
         }
       }
@@ -554,7 +559,7 @@ export default {
         return;
       }
 
-      clipboard.writeText(this.secret[type]);
+      window.electronAPI.copyToClipboard(this.secret[type]);
 
       let type_key = "seedWords";
       if (type === "spend_key") {

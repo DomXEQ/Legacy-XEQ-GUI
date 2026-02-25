@@ -1,18 +1,14 @@
-import { ipcRenderer } from "electron";
 import { Notify, Dialog, Loading, LocalStorage } from "quasar";
-import { EventEmitter } from "events";
-import { SCEE } from "./SCEE-Node";
 import { i18n, changeLanguage } from "src/boot/i18n";
 
-export class Gateway extends EventEmitter {
-  constructor(app, router) {
-    super();
+export class Gateway {
+  constructor(app, router, store) {
     this.app = app;
+    this._listeners = {};
     this.router = router;
+    this.store = store;
     this.token = null;
-    this.scee = new SCEE();
 
-    // Set the initial language
     let language = LocalStorage.has("language")
       ? LocalStorage.getItem("language")
       : "en-us";
@@ -21,14 +17,14 @@ export class Gateway extends EventEmitter {
     let theme = LocalStorage.has("theme")
       ? LocalStorage.getItem("theme")
       : "light";
-    this.app.store.commit("gateway/set_app_data", {
+    this.store.commit("gateway/set_app_data", {
       config: {
         appearance: {
           theme
         }
       }
     });
-    this.app.store.watch(
+    this.store.watch(
       state => state.gateway.app.config.appearance.theme,
       theme => {
         LocalStorage.set("theme", theme);
@@ -37,13 +33,13 @@ export class Gateway extends EventEmitter {
 
     this.closeDialog = false;
 
-    this.app.store.commit("gateway/set_app_data", {
+    this.store.commit("gateway/set_app_data", {
       status: {
-        code: 1 // Connecting to backend
+        code: 1
       }
     });
 
-    ipcRenderer.on("initialize", (event, data) => {
+    window.electronAPI.onInitialize(data => {
       this.token = data.token;
       setTimeout(() => {
         this.ws = new WebSocket("ws://127.0.0.1:" + data.port);
@@ -56,11 +52,11 @@ export class Gateway extends EventEmitter {
       }, 1000);
     });
 
-    ipcRenderer.on("confirmClose", () => {
-      this.confirmClose(i18n.t("dialog.exit.message"));
+    window.electronAPI.onConfirmClose(() => {
+      this.confirmClose(i18n.global.t("dialog.exit.message"));
     });
 
-    ipcRenderer.on("showQuitScreen", () => {
+    window.electronAPI.onShowQuitScreen(() => {
       if (this.router) {
         this.router.replace({ path: "/quit" });
       }
@@ -83,10 +79,37 @@ export class Gateway extends EventEmitter {
     });
   }
 
+  on(event, fn) {
+    if (!this._listeners[event]) this._listeners[event] = [];
+    this._listeners[event].push({ fn, once: false });
+    return this;
+  }
+
+  once(event, fn) {
+    if (!this._listeners[event]) this._listeners[event] = [];
+    this._listeners[event].push({ fn, once: true });
+    return this;
+  }
+
+  emit(event, ...args) {
+    const list = this._listeners[event];
+    if (!list) return;
+    this._listeners[event] = list.filter(entry => {
+      entry.fn(...args);
+      return !entry.once;
+    });
+  }
+
+  off(event, fn) {
+    const list = this._listeners[event];
+    if (!list) return;
+    this._listeners[event] = list.filter(entry => entry.fn !== fn);
+  }
+
   open() {
-    this.app.store.commit("gateway/set_app_data", {
+    this.store.commit("gateway/set_app_data", {
       status: {
-        code: 2 // Loading config
+        code: 2
       }
     });
     this.send("core", "init");
@@ -101,15 +124,15 @@ export class Gateway extends EventEmitter {
     const key = restart ? "restart" : "exit";
 
     Dialog.create({
-      title: i18n.t(`dialog.${key}.title`),
+      title: i18n.global.t(`dialog.${key}.title`),
       message: msg,
       ok: {
-        label: i18n.t(`dialog.${key}.ok`),
+        label: i18n.global.t(`dialog.${key}.ok`),
         color: "primary"
       },
       cancel: {
         flat: true,
-        label: i18n.t("dialog.buttons.cancel"),
+        label: i18n.global.t("dialog.buttons.cancel"),
         color: "grey"
       }
     })
@@ -117,7 +140,7 @@ export class Gateway extends EventEmitter {
         this.closeDialog = false;
         Loading.hide();
         this.router.replace({ path: "/quit" });
-        ipcRenderer.send("confirmClose", restart);
+        window.electronAPI.confirmClose(restart);
       })
       .onCancel(() => {
         this.closeDialog = false;
@@ -130,7 +153,7 @@ export class Gateway extends EventEmitter {
       method,
       data
     };
-    let encrypted_data = this.scee.encryptString(
+    let encrypted_data = window.electronAPI.sceeEncrypt(
       JSON.stringify(message),
       this.token
     );
@@ -139,7 +162,7 @@ export class Gateway extends EventEmitter {
 
   pushLog(level, message, source = "GUI") {
     try {
-      this.app.store.commit("gateway/push_session_log", {
+      this.store.commit("gateway/push_session_log", {
         level,
         message,
         source
@@ -150,14 +173,12 @@ export class Gateway extends EventEmitter {
   }
 
   geti18n(key) {
-    return Array.isArray(key) ? i18n.t(...key) : i18n.t(key);
+    return Array.isArray(key) ? i18n.global.t(...key) : i18n.global.t(key);
   }
 
   receive(message) {
-    // should wrap this in a try catch, and if fail redirect to error screen
-    // shouldn't happen outside of dev environment
     let decrypted_data = JSON.parse(
-      this.scee.decryptString(message, this.token)
+      window.electronAPI.sceeDecrypt(message, this.token)
     );
 
     if (
@@ -184,20 +205,20 @@ export class Gateway extends EventEmitter {
         this.emit("decrypt_record_result", decrypted_data.data);
         break;
       case "set_app_data":
-        this.app.store.commit("gateway/set_app_data", decrypted_data.data);
+        this.store.commit("gateway/set_app_data", decrypted_data.data);
         break;
 
       case "set_daemon_data":
-        this.app.store.commit("gateway/set_daemon_data", decrypted_data.data);
+        this.store.commit("gateway/set_daemon_data", decrypted_data.data);
         break;
 
       case "set_wallet_data":
       case "set_wallet_error":
-        this.app.store.commit("gateway/set_wallet_data", decrypted_data.data);
+        this.store.commit("gateway/set_wallet_data", decrypted_data.data);
         break;
 
       case "reset_wallet_error":
-        this.app.store.dispatch("gateway/resetWalletStatus");
+        this.store.dispatch("gateway/resetWalletStatus");
         break;
 
       case "set_tx_status": {
@@ -205,7 +226,7 @@ export class Gateway extends EventEmitter {
         if (data.i18n) {
           data.message = this.geti18n(data.i18n);
         }
-        this.app.store.commit("gateway/set_tx_status", data);
+        this.store.commit("gateway/set_tx_status", data);
         break;
       }
 
@@ -214,7 +235,7 @@ export class Gateway extends EventEmitter {
         if (data.i18n) {
           data.message = this.geti18n(data.i18n);
         }
-        this.app.store.commit("gateway/set_sweep_all_status", data);
+        this.store.commit("gateway/set_sweep_all_status", data);
         break;
       }
 
@@ -224,21 +245,20 @@ export class Gateway extends EventEmitter {
           data.message = this.geti18n(data.i18n);
         }
 
-        this.app.store.commit("gateway/set_ons_status", data);
+        this.store.commit("gateway/set_ons_status", data);
         break;
       }
 
       case "set_snode_status": {
         const data = { ...decrypted_data.data };
 
-        // We have multiple nested objects in service_node_status
         for (const key in data) {
           if (data[key].i18n) {
             data[key].message = this.geti18n(data[key].i18n);
           }
         }
 
-        this.app.store.commit("gateway/set_snode_status", data);
+        this.store.commit("gateway/set_snode_status", data);
         break;
       }
       case "set_prove_transaction_status": {
@@ -248,7 +268,7 @@ export class Gateway extends EventEmitter {
           data.message = this.geti18n(data.i18n);
         }
 
-        this.app.store.commit("gateway/set_prove_transaction_status", data);
+        this.store.commit("gateway/set_prove_transaction_status", data);
         break;
       }
       case "set_check_transaction_status": {
@@ -258,30 +278,30 @@ export class Gateway extends EventEmitter {
           data.message = this.geti18n(data.i18n);
         }
 
-        this.app.store.commit("gateway/set_check_transaction_status", data);
+        this.store.commit("gateway/set_check_transaction_status", data);
         break;
       }
       case "set_sign_status": {
-        this.app.store.commit("gateway/set_sign_status", decrypted_data.data);
+        this.store.commit("gateway/set_sign_status", decrypted_data.data);
         break;
       }
       case "set_verify_status": {
-        this.app.store.commit("gateway/set_verify_status", decrypted_data.data);
+        this.store.commit("gateway/set_verify_status", decrypted_data.data);
         break;
       }
       case "set_old_gui_import_status":
-        this.app.store.commit(
+        this.store.commit(
           "gateway/set_old_gui_import_status",
           decrypted_data.data
         );
         break;
 
       case "wallet_list":
-        this.app.store.commit("gateway/set_wallet_list", decrypted_data.data);
+        this.store.commit("gateway/set_wallet_list", decrypted_data.data);
         break;
 
       case "settings_changed_reboot":
-        this.confirmClose(i18n.t("dialog.restart.message"), true);
+        this.confirmClose(i18n.global.t("dialog.restart.message"), true);
         break;
 
       case "session_log": {
@@ -328,14 +348,12 @@ export class Gateway extends EventEmitter {
       case "return_to_wallet_select":
         this.router.replace({ path: "/wallet-select" });
         setTimeout(() => {
-          // short delay to prevent wallet data reaching the
-          // websocket moments after we close and reset data
-          this.app.store.dispatch("gateway/resetWalletData");
+          this.store.dispatch("gateway/resetWalletData");
         }, 250);
         break;
 
       case "set_update_required":
-        this.app.store.commit(
+        this.store.commit(
           "gateway/set_update_required",
           decrypted_data.data
         );
@@ -352,7 +370,7 @@ export class Gateway extends EventEmitter {
         Notify.create({
           type: "negative",
           timeout: 2000,
-          message: i18n.t("notification.errors.failedToSetLanguage", {
+          message: i18n.global.t("notification.errors.failedToSetLanguage", {
             lang
           })
         });

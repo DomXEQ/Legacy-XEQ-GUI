@@ -21,7 +21,7 @@
 import { mapState } from "vuex";
 import ONSInputForm from "./ons_input_form";
 import WalletPassword from "src/mixins/wallet_password";
-const objectAssignDeep = require("object-assign-deep");
+import objectAssignDeep from "object-assign-deep";
 
 export default {
   name: "ONSInput",
@@ -35,51 +35,52 @@ export default {
       renewing: false
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    ons_status: state => state.gateway.ons_status,
-    unlocked_balance: state => state.gateway.wallet.info.unlocked_balance,
-    disable_submit_button() {
-      const minBalance = this.updating ? 0.05 : 7.1;
-      return this.unlocked_balance < minBalance * 1e4;
-    },
-    submit_label() {
-      let label = "buttons.purchase";
-      if (this.updating) {
-        label = "buttons.update";
-      } else if (this.renewing) {
-        label = "buttons.renew";
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      ons_status: state => state.gateway.ons_status,
+      unlocked_balance: state => state.gateway.wallet.info.unlocked_balance,
+      disable_submit_button() {
+        const minBalance = this.updating ? 0.05 : 7.1;
+        return this.unlocked_balance < minBalance * 1e4;
+      },
+      submit_label() {
+        let label = "buttons.purchase";
+        if (this.updating) {
+          label = "buttons.update";
+        } else if (this.renewing) {
+          label = "buttons.renew";
+        }
+        return this.$t(label);
       }
-      return this.$t(label);
+    }),
+    onsStatusCode() {
+      return this.ons_status ? this.ons_status.code : 0;
     }
-  }),
+  },
 
   watch: {
-    ons_status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case 0:
-            this.$q.notify({
-              type: "positive",
-              timeout: 1000,
-              message
-            });
-            this.$refs.form.reset();
-            this.renewing = false;
-            this.updating = false;
-            break;
-          case -1:
-            this.$q.notify({
-              type: "negative",
-              timeout: 3000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+    onsStatusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case 0:
+          this.$q.notify({
+            type: "positive",
+            timeout: 1000,
+            message: this.ons_status.message || ""
+          });
+          this.$refs.form.reset();
+          this.renewing = false;
+          this.updating = false;
+          break;
+        case -1:
+          this.$q.notify({
+            type: "negative",
+            timeout: 3000,
+            message: this.ons_status.message || ""
+          });
+          break;
+      }
     }
   },
   methods: {

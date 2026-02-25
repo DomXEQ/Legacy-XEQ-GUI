@@ -11,7 +11,7 @@
       </p>
       <OxenField
         :label="$t('fieldLabels.serviceNodeKey')"
-        :error="$v.service_node.key.$error"
+        :error="v$.service_node.key.$error"
       >
         <q-input
           v-model.trim="service_node.key"
@@ -19,13 +19,13 @@
           :placeholder="$t('placeholders.hexCharacters', { count: 64 })"
           borderless
           dense
-          @blur="$v.service_node.key.$touch"
+          @blur="v$.service_node.key.$touch"
         />
       </OxenField>
       <OxenField
         :label="$t('fieldLabels.amount')"
         class="q-mt-md"
-        :error="$v.service_node.amount.$error"
+        :error="v$.service_node.amount.$error"
       >
         <q-input
           v-model.trim="service_node.amount"
@@ -36,7 +36,7 @@
           placeholder="0"
           borderless
           dense
-          @blur="$v.service_node.amount.$touch"
+          @blur="v$.service_node.amount.$touch"
         />
         <q-btn
           color="primary"
@@ -91,9 +91,10 @@
 </template>
 
 <script>
-const objectAssignDeep = require("object-assign-deep");
+import objectAssignDeep from "object-assign-deep";
 import { mapState } from "vuex";
-import { required, decimal } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required, decimal } from "@vuelidate/validators";
 import { service_node_key, greater_than_zero } from "src/validators/common";
 import OxenField from "components/oxen_field";
 import WalletPassword from "src/mixins/wallet_password";
@@ -105,6 +106,7 @@ import ConfirmTransactionDialog from "components/confirm_tx_dialog";
 const DO_NOTHING = 10;
 
 export default {
+  setup() { return { v$: useVuelidate() }; },
   name: "ServiceNodeStaking",
   components: {
     OxenField,
@@ -130,75 +132,83 @@ export default {
       }
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    unlocked_balance: state => state.gateway.wallet.info.unlocked_balance,
-    info: state => state.gateway.wallet.info,
-    stake_status: state => state.gateway.service_node_status.stake,
-    sweep_all_status: state => state.gateway.sweep_all_status,
-    award_address: state => state.gateway.wallet.info.address,
-    confirmSweepAll: state => state.gateway.sweep_all_status.code === 1,
-    is_ready() {
-      return this.$store.getters["gateway/isReady"];
-    },
-    is_able_to_send() {
-      return this.$store.getters["gateway/isAbleToSend"];
-    },
-    address_placeholder(state) {
-      const wallet = state.gateway.wallet.info;
-      const prefix = (wallet && wallet.address && wallet.address[0]) || "L";
-      return `${prefix}..`;
-    },
-    awaiting_service_nodes(state) {
-      const nodes = state.gateway.daemon.service_nodes.nodes;
-      const getOurContribution = node =>
-        node.contributors.find(
-          c => c.address === this.award_address && c.amount > 0
-        );
-      // a reserved node is one on which someone is a "contributor" of amount = 0
-      const reservedForUs = node =>
-        node.contributors.find(
-          c => c.address === this.award_address && c.amount == 0
-        );
-      const isAwaitingContribution = node => !node.active && !node.funded;
-      const isAwaitingContributionNonReserved = node =>
-        node.requested_unlock_height === 0 &&
-        isAwaitingContribution(node) &&
-        !getOurContribution(node) &&
-        this.openForContribution(node) > 0;
-      const isAwaitingContributionReserved = node =>
-        isAwaitingContribution(node) && reservedForUs(node);
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      unlocked_balance: state => state.gateway.wallet.info.unlocked_balance,
+      info: state => state.gateway.wallet.info,
+      stake_status: state => state.gateway.service_node_status.stake,
+      sweep_all_status: state => state.gateway.sweep_all_status,
+      award_address: state => state.gateway.wallet.info.address,
+      confirmSweepAll: state => state.gateway.sweep_all_status.code === 1,
+      is_ready() {
+        return this.$store.getters["gateway/isReady"];
+      },
+      is_able_to_send() {
+        return this.$store.getters["gateway/isAbleToSend"];
+      },
+      address_placeholder(state) {
+        const wallet = state.gateway.wallet.info;
+        const prefix = (wallet && wallet.address && wallet.address[0]) || "L";
+        return `${prefix}..`;
+      },
+      awaiting_service_nodes(state) {
+        const nodes = state.gateway.daemon.service_nodes.nodes;
+        const getOurContribution = node =>
+          node.contributors.find(
+            c => c.address === this.award_address && c.amount > 0
+          );
+        // a reserved node is one on which someone is a "contributor" of amount = 0
+        const reservedForUs = node =>
+          node.contributors.find(
+            c => c.address === this.award_address && c.amount == 0
+          );
+        const isAwaitingContribution = node => !node.active && !node.funded;
+        const isAwaitingContributionNonReserved = node =>
+          node.requested_unlock_height === 0 &&
+          isAwaitingContribution(node) &&
+          !getOurContribution(node) &&
+          this.openForContribution(node) > 0;
+        const isAwaitingContributionReserved = node =>
+          isAwaitingContribution(node) && reservedForUs(node);
 
-      // we want the reserved nodes sorted by fee at the top
-      const awaitingContributionNodesReserved = nodes
-        .filter(isAwaitingContributionReserved)
-        .map(n => {
-          return {
-            ...n,
-            awaitingContribution: true
-          };
-        });
-      const awaitingContributionNodesNonReserved = nodes
-        .filter(isAwaitingContributionNonReserved)
-        .map(n => {
-          return {
-            ...n,
-            awaitingContribution: true
-          };
-        });
+        // we want the reserved nodes sorted by fee at the top
+        const awaitingContributionNodesReserved = nodes
+          .filter(isAwaitingContributionReserved)
+          .map(n => {
+            return {
+              ...n,
+              awaitingContribution: true
+            };
+          });
+        const awaitingContributionNodesNonReserved = nodes
+          .filter(isAwaitingContributionNonReserved)
+          .map(n => {
+            return {
+              ...n,
+              awaitingContribution: true
+            };
+          });
 
-      const compareFee = (n1, n2) =>
-        this.getFeeDecimal(n1) > this.getFeeDecimal(n2) ? 1 : -1;
-      awaitingContributionNodesReserved.sort(compareFee);
-      awaitingContributionNodesNonReserved.sort(compareFee);
+        const compareFee = (n1, n2) =>
+          this.getFeeDecimal(n1) > this.getFeeDecimal(n2) ? 1 : -1;
+        awaitingContributionNodesReserved.sort(compareFee);
+        awaitingContributionNodesNonReserved.sort(compareFee);
 
-      const nodesForContribution = [
-        ...awaitingContributionNodesReserved,
-        ...awaitingContributionNodesNonReserved
-      ];
-      return nodesForContribution;
+        const nodesForContribution = [
+          ...awaitingContributionNodesReserved,
+          ...awaitingContributionNodesNonReserved
+        ];
+        return nodesForContribution;
+      }
+    }),
+    stakeStatusCode() {
+      return this.stake_status ? this.stake_status.code : 0;
+    },
+    sweepAllStatusCode() {
+      return this.sweep_all_status ? this.sweep_all_status.code : DO_NOTHING;
     }
-  }),
+  },
   validations: {
     service_node: {
       key: { required, service_node_key },
@@ -210,76 +220,68 @@ export default {
     }
   },
   watch: {
-    stake_status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case 0:
-            this.$q.notify({
-              type: "positive",
-              timeout: 1000,
-              message
-            });
-            this.$v.$reset();
-            this.service_node = {
-              key: "",
-              amount: 0
-            };
-            break;
-          case -1:
-            this.$q.notify({
-              type: "negative",
-              timeout: 3000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+    stakeStatusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case 0:
+          this.$q.notify({
+            type: "positive",
+            timeout: 1000,
+            message: this.stake_status.message || ""
+          });
+          this.v$.$reset();
+          this.service_node = {
+            key: "",
+            amount: 0
+          };
+          break;
+        case -1:
+          this.$q.notify({
+            type: "negative",
+            timeout: 3000,
+            message: this.stake_status.message || ""
+          });
+          break;
+      }
     },
-    sweep_all_status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          // the "nothing", so we can update state without doing anything
-          // in particular
-          case DO_NOTHING:
-            break;
-          case 1:
-            this.buildDialogFieldsSweepAll(val);
-            break;
-          case 0:
-            this.$q.notify({
-              type: "positive",
-              timeout: 1000,
-              message
-            });
-            this.$v.$reset();
-            this.newTx = {
-              amount: 0,
-              address: "",
-              // blink
-              priority: 5,
-              address_book: {
-                save: false,
-                name: "",
-                description: ""
-              },
-              note: ""
-            };
-            break;
-          case -1:
-            this.$q.notify({
-              type: "negative",
-              timeout: 3000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+    sweepAllStatusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        // the "nothing", so we can update state without doing anything
+        // in particular
+        case DO_NOTHING:
+          break;
+        case 1:
+          this.buildDialogFieldsSweepAll(this.sweep_all_status);
+          break;
+        case 0:
+          this.$q.notify({
+            type: "positive",
+            timeout: 1000,
+            message: this.sweep_all_status.message || ""
+          });
+          this.v$.$reset();
+          this.newTx = {
+            amount: 0,
+            address: "",
+            // blink
+            priority: 5,
+            address_book: {
+              save: false,
+              name: "",
+              description: ""
+            },
+            note: ""
+          };
+          break;
+        case -1:
+          this.$q.notify({
+            type: "negative",
+            timeout: 3000,
+            message: this.sweep_all_status.message || ""
+          });
+          break;
+      }
     }
   },
   methods: {
@@ -412,9 +414,9 @@ export default {
         .onCancel(() => {});
     },
     async stake() {
-      this.$v.service_node.$touch();
+      this.v$.service_node.$touch();
 
-      if (this.$v.service_node.key.$error) {
+      if (this.v$.service_node.key.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -444,7 +446,7 @@ export default {
           message: this.$t("notification.errors.notEnoughBalance")
         });
         return;
-      } else if (this.$v.service_node.amount.$error) {
+      } else if (this.v$.service_node.amount.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,

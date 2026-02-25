@@ -33,12 +33,15 @@ bin/*
 .env
 .env.local
 .env.*.local
+.env.production
+.env.production.*
 
 # Data and wallet files (user data)
 data/
 wallets/
 *.wallet
 *.keys
+*.address.txt
 
 # Downloads
 downloads/*
@@ -56,6 +59,7 @@ build/
 .DS_Store
 Thumbs.db
 desktop.ini
+nul
 
 # Temporary files
 *.tmp

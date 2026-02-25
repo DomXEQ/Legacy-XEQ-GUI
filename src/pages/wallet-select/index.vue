@@ -1,5 +1,13 @@
 <template>
   <q-page>
+    <q-banner
+      v-if="status.code === 8"
+      class="bg-warning text-dark q-mb-sm"
+      icon="wifi_off"
+    >
+      Offline mode: daemon unreachable. You can create a new wallet and get your address,
+      but syncing will not work until a node is connected.
+    </q-banner>
     <q-list class="wallet-list" link no-border :dark="theme == 'dark'">
       <template v-if="wallet_list.length">
         <div class="header row justify-between items-center">
@@ -19,7 +27,7 @@
                   v-for="action in actions"
                   :key="action.name"
                   clickable
-                  @click.native="action.handler"
+                  @click="action.handler"
                 >
                   <q-item-section>
                     {{ action.name }}
@@ -31,13 +39,9 @@
         </div>
         <div class="hr-separator" />
         <!-- Hardware wallets -->
-        <q-list-header v-if="hardware_wallets.length">
-          <div class="header row justify-between items-center">
-            <div class="header-title">
-              {{ $t("strings.hardwareWallets") }}
-            </div>
-          </div>
-        </q-list-header>
+        <q-item-label v-if="hardware_wallets.length" header class="list-header">
+          {{ $t("strings.hardwareWallets") }}
+        </q-item-label>
         <WalletListItem
           v-for="wallet in hardware_wallets"
           :key="`${wallet.address}-${wallet.name}`"
@@ -45,13 +49,9 @@
           :open-wallet="openWallet"
         />
         <!-- Regular wallets -->
-        <q-list-header v-if="hardware_wallets.length">
-          <div class="header row justify-between items-center">
-            <div class="header-title">
-              {{ $t("strings.regularWallets") }}
-            </div>
-          </div>
-        </q-list-header>
+        <q-item-label v-if="hardware_wallets.length" header class="list-header">
+          {{ $t("strings.regularWallets") }}
+        </q-item-label>
         <WalletListItem
           v-for="wallet in regular_wallets"
           :key="`${wallet.address}-${wallet.name}`"
@@ -59,13 +59,15 @@
           :open-wallet="openWallet"
         />
 
-        <q-item-separator />
+        <q-separator />
       </template>
       <template v-else>
         <q-item
           v-for="action in actions"
           :key="action.name"
-          @click.native="action.handler"
+          clickable
+          v-ripple
+          @click="action.handler"
         >
           <q-item-section>
             {{ action.name }}
@@ -84,70 +86,72 @@ export default {
   components: {
     WalletListItem
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    wallets: state => state.gateway.wallets,
-    wallet_list: state => state.gateway.wallets.list,
-    status: state => state.gateway.wallet.status,
-    hardware_wallets() {
-      return this.wallet_list.filter(w => w.hardware_wallet);
-    },
-    regular_wallets() {
-      return this.wallet_list.filter(w => !w.hardware_wallet);
-    },
-    actions() {
-      const actions = [
-        {
-          name: this.$t("titles.wallet.createNew"),
-          handler: this.createNewWallet
-        },
-        {
-          name: this.$t("titles.wallet.restoreFromSeed"),
-          handler: this.restoreWallet
-        },
-        {
-          name: this.$t("titles.wallet.importFromFile"),
-          handler: this.importWallet
-        }
-      ];
-
-      if (this.wallets.directories.length > 0) {
-        actions.push({
-          name: this.$t("titles.wallet.importFromOldGUI"),
-          handler: this.importOldGuiWallets
-        });
-      }
-
-      return actions;
-    }
-  }),
-  watch: {
-    status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case 0: // Wallet loaded
-            this.$q.loading.hide();
-            this.$router.replace({ path: "/wallet" });
-            break;
-          case -1: // Error
-          case -22:
-            this.$q.loading.hide();
-            this.$q.notify({
-              type: "negative",
-              timeout: 1000,
-              message
-            });
-            this.$store.commit("gateway/set_wallet_data", {
-              status: {
-                code: 1 // Reset to 1 (ready for action)
-              }
-            });
-            break;
-        }
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      status: state => state.gateway.app.status,
+      wallets: state => state.gateway.wallets,
+      wallet_list: state => state.gateway.wallets.list,
+      status: state => state.gateway.wallet.status,
+      hardware_wallets() {
+        return this.wallet_list.filter(w => w.hardware_wallet);
       },
-      deep: true
+      regular_wallets() {
+        return this.wallet_list.filter(w => !w.hardware_wallet);
+      },
+      actions() {
+        const actions = [
+          {
+            name: this.$t("titles.wallet.createNew"),
+            handler: this.createNewWallet
+          },
+          {
+            name: this.$t("titles.wallet.restoreFromSeed"),
+            handler: this.restoreWallet
+          },
+          {
+            name: this.$t("titles.wallet.importFromFile"),
+            handler: this.importWallet
+          }
+        ];
+
+        if (this.wallets.directories.length > 0) {
+          actions.push({
+            name: this.$t("titles.wallet.importFromOldGUI"),
+            handler: this.importOldGuiWallets
+          });
+        }
+
+        return actions;
+      }
+    }),
+    statusCode() {
+      return this.status ? this.status.code : 1;
+    }
+  },
+  watch: {
+    statusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case 0: // Wallet loaded
+          this.$q.loading.hide();
+          this.$router.replace({ path: "/wallet" });
+          break;
+        case -1: // Error
+        case -22:
+          this.$q.loading.hide();
+          this.$q.notify({
+            type: "negative",
+            timeout: 1000,
+            message: this.status.message || ""
+          });
+          this.$store.commit("gateway/set_wallet_data", {
+            status: {
+              code: 1 // Reset to 1 (ready for action)
+            }
+          });
+          break;
+      }
     }
   },
   created() {
@@ -197,22 +201,22 @@ export default {
       }
     },
     createNewWallet() {
-      this.$router.replace({ path: "wallet-select/create" });
+      this.$router.replace({ name: "wallet-create" });
     },
     restoreWallet() {
-      this.$router.replace({ path: "wallet-select/restore" });
+      this.$router.replace({ name: "wallet-restore" });
     },
     restoreViewWallet() {
-      this.$router.replace({ path: "wallet-select/import-view-only" });
+      this.$router.replace({ name: "wallet-import-view-only" });
     },
     importWallet() {
-      this.$router.replace({ path: "wallet-select/import" });
+      this.$router.replace({ name: "wallet-import" });
     },
     importOldGuiWallets() {
-      this.$router.replace({ path: "wallet-select/import-old-gui" });
+      this.$router.replace({ name: "wallet-import-old-gui" });
     },
     importLegacyWallet() {
-      this.$router.replace({ path: "wallet-select/import-legacy" });
+      this.$router.replace({ name: "wallet-import-legacy" });
     }
   }
 };

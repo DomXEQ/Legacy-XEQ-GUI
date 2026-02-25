@@ -61,8 +61,8 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/EquilibriaHorizon/equilibria-electron-gui-wallet.git
-cd equilibria-electron-gui-wallet
+git clone https://github.com/DomXEQ/Legacy-XEQ-GUI.git
+cd Legacy-XEQ-GUI
 ```
 
 2. Install dependencies:
@@ -125,6 +125,6 @@ If you have questions about contributing, please:
 
 1. Check existing issues and pull requests
 2. Open a new issue with the `question` label
-3. Contact the maintainers at `info@equilibria.network`
+3. Reach out via Telegram: [t.me/XEQCommunity](https://t.me/XEQCommunity)
 
-Thank you for contributing to Equilibria!
+Thank you for contributing to Legacy XEQ GUI!

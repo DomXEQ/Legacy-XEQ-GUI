@@ -1,7 +1,7 @@
 <template>
   <q-page>
     <div class="q-mx-md import-old-gui">
-      <q-list link dark no-border class="wallet-list">
+      <q-list class="wallet-list">
         <q-item
           v-for="state in directory_state"
           :key="state.directory"
@@ -14,7 +14,7 @@
               </q-item-label>
               <q-item-label
                 class="wallet-name"
-                @click.native="state.selected = !state.selected"
+                @click="state.selected = !state.selected"
               >
                 {{ state.directory }}
               </q-item-label>
@@ -55,28 +55,33 @@ export default {
       directory_state: []
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    directories: state => state.gateway.wallets.directories,
-    old_gui_import_status: state => state.gateway.old_gui_import_status,
-    selectOptions: () => [
-      {
-        label: "Main",
-        value: "mainnet"
-      },
-      {
-        label: "Staging",
-        value: "stagenet"
-      },
-      {
-        label: "Test",
-        value: "testnet"
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      directories: state => state.gateway.wallets.directories,
+      old_gui_import_status: state => state.gateway.old_gui_import_status,
+      selectOptions: () => [
+        {
+          label: "Main",
+          value: "mainnet"
+        },
+        {
+          label: "Staging",
+          value: "stagenet"
+        },
+        {
+          label: "Test",
+          value: "testnet"
+        }
+      ],
+      selectedWallets() {
+        return this.directory_state.filter(s => s.selected);
       }
-    ],
-    selectedWallets() {
-      return this.directory_state.filter(s => s.selected);
+    }),
+    oldGuiImportStatusCode() {
+      return this.old_gui_import_status ? this.old_gui_import_status.code : -1;
     }
-  }),
+  },
   watch: {
     directories: {
       handler() {
@@ -84,31 +89,28 @@ export default {
       },
       deep: true
     },
-    old_gui_import_status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
+    oldGuiImportStatusCode(code, oldCode) {
+      if (code === oldCode) return;
 
-        const { code, failed_wallets } = this.old_gui_import_status;
+      const { failed_wallets } = this.old_gui_import_status;
 
-        // Imported
-        if (code === 0) {
-          this.$q.loading.hide();
-          if (failed_wallets.length === 0) {
-            this.$router.replace({ path: "/wallet-select" });
-          } else {
-            failed_wallets.forEach(wallet => {
-              this.$q.notify({
-                type: "negative",
-                timeout: 3000,
-                message:
-                  this.$t("notification.errors.failedWalletImport") +
-                  `: ${wallet}`
-              });
+      // Imported
+      if (code === 0) {
+        this.$q.loading.hide();
+        if (failed_wallets.length === 0) {
+          this.$router.replace({ path: "/wallet-select" });
+        } else {
+          failed_wallets.forEach(wallet => {
+            this.$q.notify({
+              type: "negative",
+              timeout: 3000,
+              message:
+                this.$t("notification.errors.failedWalletImport") +
+                `: ${wallet}`
             });
-          }
+          });
         }
-      },
-      deep: true
+      }
     }
   },
   created() {

@@ -7,12 +7,12 @@
     </div>
 
     <template v-if="address_book_combined.length">
-      <q-list link no-border :dark="theme == 'dark'" class="oxen-list">
+      <q-list class="oxen-list">
         <q-item
           v-for="(entry, index) in address_book_combined"
           :key="`${entry.address}-${entry.name}-${index}`"
           class="oxen-list-item"
-          @click.native="details(entry)"
+          @click="details(entry)"
         >
           <q-item-section>
             <q-item-label class="ellipsis">{{ entry.address }}</q-item-label>
@@ -56,7 +56,6 @@
 </template>
 
 <script>
-const { clipboard } = require("electron");
 import { mapState } from "vuex";
 import AddressBookDetails from "components/address_book_details";
 import ContextMenu from "components/menus/contextmenu";
@@ -110,7 +109,7 @@ export default {
       });
     },
     copyAddress(entry) {
-      clipboard.writeText(entry.address);
+      window.electronAPI.copyToClipboard(entry.address);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

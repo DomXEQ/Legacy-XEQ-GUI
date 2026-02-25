@@ -5,9 +5,9 @@
         <q-input
           v-model="wallet.name"
           float-label="Wallet name"
-          :error="$v.wallet.name.$error"
+          :error="v$.wallet.name.$error"
           :dark="theme == 'dark'"
-          @blur="$v.wallet.name.$touch"
+          @blur="v$.wallet.name.$touch"
         />
       </q-field>
 
@@ -15,9 +15,9 @@
         <q-input
           v-model="wallet.address"
           float-label="Wallet address"
-          :error="$v.wallet.address.$error"
+          :error="v$.wallet.address.$error"
           :dark="theme == 'dark'"
-          @blur="$v.wallet.address.$touch"
+          @blur="v$.wallet.address.$touch"
         />
       </q-field>
 
@@ -25,9 +25,9 @@
         <q-input
           v-model="wallet.viewkey"
           float-label="Private viewkey"
-          :error="$v.wallet.viewkey.$error"
+          :error="v$.wallet.viewkey.$error"
           :dark="theme == 'dark'"
-          @blur="$v.wallet.viewkey.$touch"
+          @blur="v$.wallet.viewkey.$touch"
         />
       </q-field>
 
@@ -51,9 +51,9 @@
                 type="number"
                 min="0"
                 float-label="Restore from block height"
-                :error="$v.wallet.refresh_start_height.$error"
+                :error="v$.wallet.refresh_start_height.$error"
                 :dark="theme == 'dark'"
-                @blur="$v.wallet.refresh_start_height.$touch"
+                @blur="v$.wallet.refresh_start_height.$touch"
               />
             </template>
           </div>
@@ -109,10 +109,14 @@
 </template>
 
 <script>
-import { required, numeric } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required, numeric } from "@vuelidate/validators";
 import { privkey, address } from "src/validators/common";
 import { mapState } from "vuex";
 export default {
+  setup() {
+    return { v$: useVuelidate() };
+  },
   data() {
     return {
       wallet: {
@@ -127,35 +131,36 @@ export default {
       }
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    status: state => state.gateway.wallet.status
-  }),
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      status: state => state.gateway.wallet.status
+    }),
+    statusCode() {
+      return this.status ? this.status.code : 1;
+    }
+  },
   watch: {
-    status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case 1:
-            break;
-          case 0:
-            this.$q.loading.hide();
-            this.$router.replace({
-              path: "/wallet-select/created"
-            });
-            break;
-          default:
-            this.$q.loading.hide();
-            this.$q.notify({
-              type: "negative",
-              timeout: 1000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+    statusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case 1:
+          break;
+        case 0:
+          this.$q.loading.hide();
+          this.$router.replace({
+            path: "/wallet-select/created"
+          });
+          break;
+        default:
+          this.$q.loading.hide();
+          this.$q.notify({
+            type: "negative",
+            timeout: 1000,
+            message: this.status.message || ""
+          });
+          break;
+      }
     }
   },
   validations: {
@@ -179,9 +184,9 @@ export default {
   },
   methods: {
     restore_view_wallet() {
-      this.$v.wallet.$touch();
+      this.v$.wallet.$touch();
 
-      if (this.$v.wallet.name.$error) {
+      if (this.v$.wallet.name.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -189,7 +194,7 @@ export default {
         });
         return;
       }
-      if (this.$v.wallet.address.$error) {
+      if (this.v$.wallet.address.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -198,7 +203,7 @@ export default {
         return;
       }
 
-      if (this.$v.wallet.viewkey.$error) {
+      if (this.v$.wallet.viewkey.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -207,7 +212,7 @@ export default {
         return;
       }
 
-      if (this.$v.wallet.refresh_start_height.$error) {
+      if (this.v$.wallet.refresh_start_height.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,

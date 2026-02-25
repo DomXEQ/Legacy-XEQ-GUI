@@ -34,7 +34,6 @@
 </template>
 
 <script>
-const { clipboard } = require("electron");
 import ContextMenu from "components/menus/contextmenu";
 
 export default {
@@ -75,7 +74,7 @@ export default {
       if (this.$refs.copy) {
         this.$refs.copy.$el.blur();
       }
-      clipboard.writeText(this.address);
+      window.electronAPI.copyToClipboard(this.address);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

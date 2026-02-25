@@ -14,14 +14,6 @@
             </q-card-section>
           </q-card>
         </div>
-        <div class="col q-ml-md">
-          <q-card>
-            <q-card-section>
-              <div class="text-h6">Active Service Nodes</div>
-              <div class="text-h4 text-positive">{{ activeNodes }}</div>
-            </q-card-section>
-          </q-card>
-        </div>
       </div>
 
       <q-card>
@@ -41,11 +33,11 @@
           </div>
 
           <q-table
-            :data="serviceNodes"
+            :rows="serviceNodes"
             :columns="columns"
             row-key="service_node_pubkey"
             :loading="loading"
-            :pagination.sync="pagination"
+            v-model:pagination="pagination"
             :rows-per-page-options="[10, 25, 50, 100]"
             flat
             dense
@@ -169,16 +161,23 @@ export default {
       serviceNodesRaw: state => state.gateway.daemon.service_nodes.nodes || []
     }),
     serviceNodes() {
-      return this.serviceNodesRaw.map(node => ({
-        ...node,
-        active_state: node.active ? "ACTIVE" : "INACTIVE"
-      }));
+      const now = Math.floor(Date.now() / 1000);
+      const uptimeProofWindow = 7200; // 2 hours: node is "active" if it proved recently
+      return this.serviceNodesRaw.map(node => {
+        const isActive =
+          node.active === true ||
+          (node.last_uptime_proof &&
+            node.last_uptime_proof > 0 &&
+            now - node.last_uptime_proof < uptimeProofWindow);
+        return {
+          ...node,
+          active: isActive,
+          active_state: isActive ? "ACTIVE" : "INACTIVE"
+        };
+      });
     },
     totalNodes() {
       return this.serviceNodes.length;
-    },
-    activeNodes() {
-      return this.serviceNodes.filter(node => node.active).length;
     }
   },
   mounted() {

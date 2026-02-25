@@ -11,7 +11,7 @@
       </i18n>
       <OxenField
         :label="$t('fieldLabels.serviceNodeCommand')"
-        :error="$v.registration_string.$error"
+        :error="v$.registration_string.$error"
         :disabled="registration_status.sending"
       >
         <q-input
@@ -22,7 +22,7 @@
           :disabled="registration_status.sending"
           borderless
           dense
-          @blur="$v.registration_string.$touch"
+          @blur="v$.registration_string.$touch"
           @paste="onPaste"
         />
       </OxenField>
@@ -43,11 +43,13 @@
 
 <script>
 import { mapState } from "vuex";
-import { required } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required } from "@vuelidate/validators";
 import OxenField from "components/oxen_field";
 import WalletPassword from "src/mixins/wallet_password";
 
 export default {
+  setup() { return { v$: useVuelidate() }; },
   name: "ServiceNodeRegistration",
   components: {
     OxenField
@@ -58,45 +60,46 @@ export default {
       registration_string: ""
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    registration_status: state => state.gateway.service_node_status.registration
-  }),
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      registration_status: state => state.gateway.service_node_status.registration
+    }),
+    registrationStatusCode() {
+      return this.registration_status ? this.registration_status.code : 0;
+    }
+  },
   validations: {
     registration_string: { required }
   },
   watch: {
-    registration_status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case 0:
-            this.$q.notify({
-              type: "positive",
-              timeout: 1000,
-              message
-            });
-            this.$v.$reset();
-            this.registration_string = "";
-            break;
-          case -1:
-            this.$q.notify({
-              type: "negative",
-              timeout: 3000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+    registrationStatusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case 0:
+          this.$q.notify({
+            type: "positive",
+            timeout: 1000,
+            message: this.registration_status.message || ""
+          });
+          this.v$.$reset();
+          this.registration_string = "";
+          break;
+        case -1:
+          this.$q.notify({
+            type: "negative",
+            timeout: 3000,
+            message: this.registration_status.message || ""
+          });
+          break;
+      }
     }
   },
   methods: {
     async register() {
-      this.$v.registration_string.$touch();
+      this.v$.registration_string.$touch();
 
-      if (this.$v.registration_string.$error) {
+      if (this.v$.registration_string.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,

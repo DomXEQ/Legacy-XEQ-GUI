@@ -7,7 +7,6 @@
 </template>
 
 <script>
-const { clipboard } = require("electron");
 export default {
   name: "CopyIcon",
   props: {
@@ -23,7 +22,7 @@ export default {
   },
   methods: {
     copyContent() {
-      clipboard.writeText(this.content);
+      window.electronAPI.copyToClipboard(this.content);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

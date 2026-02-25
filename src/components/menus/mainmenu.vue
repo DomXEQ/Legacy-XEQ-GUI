@@ -7,19 +7,19 @@
             v-if="!disableSwitchWallet"
             v-close-popup
             clickable
-            @click.native="switchWallet"
+            @click="switchWallet"
           >
             <q-item-label header>{{
               $t("menuItems.switchWallet")
             }}</q-item-label>
           </q-item>
-          <q-item v-close-popup clickable @click.native="openSettings">
+          <q-item v-close-popup clickable @click="openSettings">
             <q-item-label header>{{ $t("menuItems.settings") }}</q-item-label>
           </q-item>
-          <q-item v-close-popup clickable @click.native="showAbout(true)">
+          <q-item v-close-popup clickable @click="showAbout(true)">
             <q-item-label header>{{ $t("menuItems.about") }}</q-item-label>
           </q-item>
-          <q-item v-close-popup clickable @click.native="exit">
+          <q-item v-close-popup clickable @click="exit">
             <q-item-label header>{{ $t("menuItems.exit") }}</q-item-label>
           </q-item>
         </q-list>

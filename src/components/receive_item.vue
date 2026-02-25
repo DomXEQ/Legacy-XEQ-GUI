@@ -1,5 +1,5 @@
 <template>
-  <q-list class="oxen-list-item" no-border @click.native="details(address)">
+  <q-list class="oxen-list-item" no-border @click="details(address)">
     <q-item>
       <q-item-section class="flex">
         <q-item-label class="ellipsis">{{ address.address }}</q-item-label>
@@ -44,21 +44,17 @@
             <span class="col-sm-4">
               <span>{{ $t("strings.xeqBalance") }}</span>
               <br />
-              <span class="value">{{ address.balance | currency }}</span>
+              <span class="value">{{ formatCurrency(address.balance) }}</span>
             </span>
             <span class="col-sm-4">
               <span>{{ $t("strings.xeqUnlockedBalance") }}</span>
               <br />
-              <span class="value">{{
-                address.unlocked_balance | currency
-              }}</span>
+              <span class="value">{{ formatCurrency(address.unlocked_balance) }}</span>
             </span>
             <span class="col-sm-4">
               <span>{{ $t("strings.unspentOutputs") }}</span>
               <br />
-              <span class="value">{{
-                address.num_unspent_outputs | toString
-              }}</span>
+              <span class="value">{{ formatToString(address.num_unspent_outputs) }}</span>
             </span>
           </div>
         </q-item-section>
@@ -79,18 +75,6 @@ export default {
   name: "ReceiveItem",
   components: {
     ContextMenu
-  },
-  filters: {
-    toString: function(value) {
-      if (typeof value !== "number") return "N/A";
-      return String(value);
-    },
-    currency: function(value) {
-      if (typeof value !== "number") return "N/A";
-
-      const amount = value / 1e4;
-      return amount.toLocaleString();
-    }
   },
   props: {
     address: {
@@ -138,6 +122,16 @@ export default {
     qrImage() {
       const image = this.whiteQRIcon ? "qr-code" : "qr-code-grey";
       return `${image}.svg`;
+    }
+  },
+  methods: {
+    formatToString(value) {
+      if (typeof value !== "number") return "N/A";
+      return String(value);
+    },
+    formatCurrency(value) {
+      if (typeof value !== "number") return "N/A";
+      return (value / 1e4).toLocaleString();
     }
   }
 };

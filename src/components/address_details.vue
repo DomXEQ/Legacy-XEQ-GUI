@@ -130,17 +130,17 @@
           <div class="text-center q-mb-sm q-pa-md" style="background: white;">
             <QrcodeVue ref="qr" :value="address.address" size="240">
             </QrcodeVue>
-            <q-menu content-menu>
+            <q-menu context-menu>
               <q-list
                 link
                 separator
                 style="min-width: 150px; max-height: 300px;"
               >
-                <q-item v-close-popup @click.native="copyQR()">
-                  <q-item-label :label="$t('menuItems.copyQR')" />
+                <q-item clickable v-close-popup @click="copyQR()">
+                  <q-item-section>{{ $t('menuItems.copyQR') }}</q-item-section>
                 </q-item>
-                <q-item v-close-popup @click.native="saveQR()">
-                  <q-item-label :label="$t('menuItems.saveQR')" />
+                <q-item clickable v-close-popup @click="saveQR()">
+                  <q-item-section>{{ $t('menuItems.saveQR') }}</q-item-section>
                 </q-item>
               </q-list>
             </q-menu>
@@ -160,7 +160,6 @@
 
 <script>
 import { mapState } from "vuex";
-const { clipboard, nativeImage } = require("electron");
 import AddressHeader from "components/address_header";
 import FormatOxen from "components/format_oxen";
 import QrcodeVue from "qrcode.vue";
@@ -208,8 +207,7 @@ export default {
   methods: {
     copyQR() {
       const data = this.$refs.qr.$el.childNodes[0].toDataURL();
-      const img = nativeImage.createFromDataURL(data);
-      clipboard.writeImage(img);
+      window.electronAPI.copyImageToClipboard(data);
       this.$q.notify({
         type: "positive",
         timeout: 1000,
@@ -221,7 +219,7 @@ export default {
       this.$gateway.send("core", "save_png", { img, type: "QR Code" });
     },
     copyAddress() {
-      clipboard.writeText(this.address.address);
+      window.electronAPI.copyToClipboard(this.address.address);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

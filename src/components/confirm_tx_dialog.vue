@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="show" persistent>
+  <q-dialog :model-value="show" persistent>
     <q-card class="confirm-tx-card">
       <q-card-section>
         <div class="text-h6">{{ $t("dialog.confirmTransaction.title") }}</div>

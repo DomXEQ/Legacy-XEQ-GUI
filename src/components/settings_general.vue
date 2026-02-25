@@ -84,12 +84,12 @@
             class="remote-dropdown"
             flat
           >
-            <q-list link no-border>
+            <q-list>
               <q-item
                 v-for="option in remotes"
                 :key="option.host"
                 v-close-popup
-                @click.native="setPreset(option)"
+                @click="setPreset(option)"
               >
                 <q-item-label>
                   <q-item-label header
@@ -389,17 +389,20 @@ export default {
     remotes: state => state.gateway.app.remotes,
     config: state => state.gateway.app.pending_config,
     config_daemon() {
-      return this.config.daemons[this.config.app.net_type];
+      if (!this.config.daemons || !this.config.app) return {};
+      return this.config.daemons[this.config.app.net_type] || {};
     },
     is_remote() {
       return this.config_daemon.type === "remote";
     },
     defaults: state => state.gateway.app.defaults,
     daemon_defaults() {
-      return this.defaults.daemons[this.config.app.net_type];
+      if (!this.defaults || !this.defaults.daemons || !this.config.app) return {};
+      return this.defaults.daemons[this.config.app.net_type] || {};
     }
   }),
   mounted() {
+    if (!this.config.app || !this.config.daemons) return;
     if (this.randomiseRemote && this.config.app.net_type === "mainnet") {
       this.setPreset({ host: "us.equilibriacc.com", port: "9231" });
       this.config_daemon.type = "remote";

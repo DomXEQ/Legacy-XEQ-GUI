@@ -1,5 +1,5 @@
 <template>
-  <div class="column wallet-info">
+  <div class="column wallet-info" v-if="info">
     <div class="row justify-between items-center wallet-header">
       <div class="title">{{ info.name }}</div>
       <WalletSettings />
@@ -112,8 +112,9 @@ export default {
 
       // Find most recent outgoing/pending TX with < 10 confirmations
       const outTypes = ["out", "pending", "stake"];
-      const recentLockedTx = this.tx_list
-        .filter(tx => outTypes.includes(tx.type))
+      const list = this.tx_list || [];
+      const recentLockedTx = list
+        .filter(tx => tx && outTypes.includes(tx.type))
         .filter(tx => tx.height > 0 && height - tx.height < 10)
         .sort((a, b) => b.height - a.height)[0];
 
@@ -128,8 +129,8 @@ export default {
       }
 
       // Pending TX not yet in a block
-      const pendingTx = this.tx_list.find(
-        tx => tx.type === "pending" || tx.type === "pool"
+      const pendingTx = (this.tx_list || []).find(
+        tx => tx && (tx.type === "pending" || tx.type === "pool")
       );
       if (pendingTx) return "Pending confirmation...";
 

@@ -156,7 +156,6 @@
 </template>
 
 <script>
-const { clipboard } = require("electron");
 import { mapState } from "vuex";
 export default {
   data() {
@@ -187,9 +186,10 @@ export default {
     },
     copyPrivateKey(type, event) {
       event.stopPropagation();
-      for (let i = 0; i < event.path.length; i++) {
-        if (event.path[i].tagName == "BUTTON") {
-          event.path[i].blur();
+      const path = event.composedPath ? event.composedPath() : event.path || [];
+      for (let i = 0; i < path.length; i++) {
+        if (path[i].tagName == "BUTTON") {
+          path[i].blur();
           break;
         }
       }
@@ -203,7 +203,7 @@ export default {
         return;
       }
 
-      clipboard.writeText(this.secret[type]);
+      window.electronAPI.copyToClipboard(this.secret[type]);
 
       let type_key = "seedWords";
       if (type === "spend_key") {
@@ -237,7 +237,7 @@ export default {
         });
     },
     copyAddress() {
-      clipboard.writeText(this.info.address);
+      window.electronAPI.copyToClipboard(this.info.address);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

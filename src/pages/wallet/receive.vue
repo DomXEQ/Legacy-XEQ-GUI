@@ -1,6 +1,6 @@
 <template>
   <q-page class="receive">
-    <q-list link no-border :dark="theme == 'dark'" class="oxen-list">
+    <q-list class="oxen-list">
       <q-item-label header class="list-header">{{
         $t("strings.addresses.myPrimaryAddress")
       }}</q-item-label>
@@ -89,7 +89,6 @@
 </template>
 
 <script>
-const { clipboard, nativeImage } = require("electron");
 import { mapState } from "vuex";
 import QrcodeVue from "qrcode.vue";
 import AddressDetails from "components/address_details";
@@ -144,8 +143,7 @@ export default {
     },
     copyQR() {
       const data = this.$refs.qr.$el.childNodes[0].toDataURL();
-      const img = nativeImage.createFromDataURL(data);
-      clipboard.writeImage(img);
+      window.electronAPI.copyImageToClipboard(data);
       this.$q.notify({
         type: "positive",
         timeout: 1000,
@@ -158,7 +156,7 @@ export default {
     },
     copyAddress(address, event) {
       event.stopPropagation();
-      clipboard.writeText(address);
+      window.electronAPI.copyToClipboard(address);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

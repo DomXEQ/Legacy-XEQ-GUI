@@ -1,5 +1,5 @@
 <template>
-  <q-item v-close-popup clickable @click.native="clickedItem($event)">
+  <q-item v-close-popup clickable @click="clickedItem($event)">
     <q-item-section>
       {{ $t(i18n) }}
     </q-item-section>

@@ -36,9 +36,9 @@ export class Backend {
   init(config) {
     let configDir;
     if (os.platform() === "win32") {
-      configDir = "C:\\ProgramData\\equilibria";
+      configDir = path.join(process.env.ProgramData || "C:\\ProgramData", "legacy-xeq-gui");
     } else {
-      configDir = path.join(os.homedir(), ".equilibria");
+      configDir = path.join(os.homedir(), ".legacy-xeq-gui");
     }
     this.wallet_dir = path.join(process.cwd(), "wallets");
 
@@ -134,7 +134,7 @@ export class Backend {
 
     this.wss = new WebSocket.Server({
       port: config.port,
-      maxPayload: Number.POSITIVE_INFINITY
+      maxPayload: 10 * 1024 * 1024 // 10 MB cap; loopback only, prevents unbounded memory allocation
     });
 
     this.wss.on("connection", ws => {
@@ -161,11 +161,17 @@ export class Backend {
   }
 
   sendLog(level, message) {
+    // Mirror to terminal so logs are visible without opening the GUI Troubleshooting tab
+    const consoleFn = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
+    consoleFn(`[${level.toUpperCase()}] ${message}`);
     this.send("session_log", { level, message });
   }
 
   receive(data) {
-    let decrypted_data = JSON.parse(this.scee.decryptString(data, this.token));
+    // ws v8+ delivers text frames as Buffer objects; convert to string so that
+    // SCEE.decryptString can correctly base64-decode the ciphertext.
+    const message = Buffer.isBuffer(data) ? data.toString("utf8") : String(data);
+    let decrypted_data = JSON.parse(this.scee.decryptString(message, this.token));
 
     // route incoming request to either the daemon, wallet, or here
     switch (decrypted_data.module) {
@@ -298,39 +304,49 @@ export class Backend {
       }
 
       case "open_url":
-        require("electron").shell.openExternal(params.url);
+        if (typeof params.url === "string" && params.url.startsWith("https://")) {
+          require("electron").shell.openExternal(params.url);
+        }
         break;
 
       case "save_png": {
-        let filename = dialog.showSaveDialog(this.mainWindow, {
-          title: "Save " + params.type,
-          filters: [{ name: "PNG", extensions: ["png"] }],
-          defaultPath: os.homedir()
-        });
-        if (filename) {
-          let base64Data = params.img.replace(/^data:image\/png;base64,/, "");
-          let binaryData = Buffer.from(base64Data, "base64").toString("binary");
-          fs.writeFile(filename, binaryData, "binary", err => {
-            if (err) {
-              this.send("show_notification", {
-                type: "negative",
-                i18n: [
-                  "notification.errors.errorSavingItem",
-                  { item: params.type }
-                ],
-                timeout: 2000
-              });
-            } else {
-              this.send("show_notification", {
-                i18n: [
-                  "notification.positive.itemSaved",
-                  { item: params.type, filename }
-                ],
-                timeout: 2000
+        dialog
+          .showSaveDialog(this.mainWindow, {
+            title: "Save " + params.type,
+            filters: [{ name: "PNG", extensions: ["png"] }],
+            defaultPath: os.homedir()
+          })
+          .then(({ filePath }) => {
+            if (filePath) {
+              let base64Data = params.img.replace(
+                /^data:image\/png;base64,/,
+                ""
+              );
+              let binaryData = Buffer.from(base64Data, "base64").toString(
+                "binary"
+              );
+              fs.writeFile(filePath, binaryData, "binary", err => {
+                if (err) {
+                  this.send("show_notification", {
+                    type: "negative",
+                    i18n: [
+                      "notification.errors.errorSavingItem",
+                      { item: params.type }
+                    ],
+                    timeout: 2000
+                  });
+                } else {
+                  this.send("show_notification", {
+                    i18n: [
+                      "notification.positive.itemSaved",
+                      { item: params.type, filename: filePath }
+                    ],
+                    timeout: 2000
+                  });
+                }
               });
             }
           });
-        }
         break;
       }
 
@@ -338,24 +354,11 @@ export class Backend {
         break;
     }
   }
-  // if the version is a whole minor version out of date (hardfork out of date)
-  // set update required to true
+  // TODO: Update the GitHub releases URL below to the XEQ flagship wallet repo
+  // once the release infrastructure is established.
+  // Example: "https://api.github.com/repos/EquilibriaCC/xeq-electron-wallet/releases/latest"
   async checkVersion() {
-    try {
-      const { data } = await axios.get(
-        "https://api.github.com/repos/loki-project/loki-electron-gui-wallet/releases/latest"
-      );
-      // remove the 'v' from front of the version
-      const latestVersion = data.tag_name.substring(1);
-      // can return "major", "minor", "patch"
-      const vSizeDiff = semver.diff(version, latestVersion);
-      const updateAvailable = semver.ltr(version, latestVersion);
-      const majorOrMinor = vSizeDiff === "major" || vSizeDiff == "minor";
-      const updateRequired = updateAvailable && majorOrMinor;
-      this.send("set_update_required", updateRequired);
-    } catch (e) {
-      this.send("set_updated_required", false);
-    }
+    this.send("set_update_required", false);
   }
 
   initLogger(logPath) {
@@ -403,33 +406,33 @@ export class Backend {
 
     fs.readFile(this.config_file, "utf8", (err, data) => {
       if (err) {
-        this.send("set_app_data", {
-          status: {
-            code: -1 // Config not found
-          },
-          config: this.config_data,
-          pending_config: this.config_data
-        });
-        return;
-      }
-
-      // Remove BOM (Byte Order Mark) if present
-      if (data.charCodeAt(0) === 0xfeff) {
-        data = data.slice(1);
-      }
-
-      let disk_config_data = JSON.parse(data);
-
-      // semi-shallow object merge
-      Object.keys(disk_config_data).map(key => {
-        if (!this.config_data.hasOwnProperty(key)) {
-          this.config_data[key] = {};
-        }
-        this.config_data[key] = Object.assign(
-          this.config_data[key],
-          disk_config_data[key]
+        // First run — no config file. Save defaults to disk and auto-start
+        // using the default US remote node without showing the setup wizard.
+        fs.writeFile(
+          this.config_file,
+          JSON.stringify(this.config_data, null, 4),
+          "utf8",
+          () => {}
         );
-      });
+      } else {
+        // Remove BOM (Byte Order Mark) if present
+        if (data.charCodeAt(0) === 0xfeff) {
+          data = data.slice(1);
+        }
+
+        let disk_config_data = JSON.parse(data);
+
+        // semi-shallow object merge
+        Object.keys(disk_config_data).map(key => {
+          if (!this.config_data.hasOwnProperty(key)) {
+            this.config_data[key] = {};
+          }
+          this.config_data[key] = Object.assign(
+            this.config_data[key],
+            disk_config_data[key]
+          );
+        });
+      }
 
       // here we may want to check if config data is valid, if not also send code -1
       // i.e. check ports are integers and > 1024, check that data dir path exists, etc
@@ -552,187 +555,82 @@ export class Backend {
         }
       });
 
-      // Make sure the remote node provided is accessible
-      const config_daemon = this.config_data.daemons[net_type];
-
-      // Add timeout wrapper for checkRemote to prevent hanging
-      const checkRemotePromise = this.daemon.checkRemote(config_daemon);
-      const timeoutPromise = new Promise(resolve => {
-        setTimeout(() => {
-          resolve({ error: { message: "Connection timeout" } });
-        }, 25000); // 25 second timeout (slightly longer than checkRemote's 20s)
-      });
-
-      Promise.race([checkRemotePromise, timeoutPromise])
-        .then(data => {
-          if (data.error) {
-            console.error(
-              "[Backend] Error checking remote daemon:",
-              data.error
-            );
-            this.sendLog(
-              "error",
-              `Remote daemon check failed: ${data.error.message ||
-                JSON.stringify(data.error)}`
-            );
-            this.send("show_notification", {
-              type: "negative",
-              message: `Cannot access remote node: ${data.error.message ||
-                "Connection failed"}`,
-              timeout: 5000
-            });
-
-            // Go back to config so user can pick a different node
-            this.send("set_app_data", {
-              status: {
-                code: -1
-              }
-            });
-            return;
-          }
-
-          // If we got a net type back then check if ours match
-          if (data.net_type && data.net_type !== net_type) {
-            console.warn(
-              `[Backend] Network type mismatch: expected ${net_type}, got ${data.net_type}`
-            );
-            this.send("show_notification", {
-              type: "negative",
-              i18n: "notification.errors.differentNetType",
-              timeout: 2000
-            });
-
-            // Go back to config
-            this.send("set_app_data", {
-              status: {
-                code: -1 // Return to config screen
-              }
-            });
-            return;
-          }
-
-          this.daemon.checkVersion().then(version => {
-            if (version) {
-              this.send("set_app_data", {
-                status: {
-                  code: 4,
-                  message: version
-                }
-              });
-            } else {
-              // daemon not found, probably removed by AV, set to remote node
-              this.config_data.daemons[net_type].type = "remote";
-              this.send("set_app_data", {
-                status: {
-                  code: 5
-                },
-                config: this.config_data,
-                pending_config: this.config_data
-              });
-            }
-
-            this.daemon.start(this.config_data).then(() => {
-              this.send("set_app_data", {
-                status: {
-                  code: 6 // Starting wallet
-                }
-              });
-
-              this.walletd
-                .start(this.config_data)
-                .then(() => {
-                  this.send("set_app_data", {
-                    status: {
-                      code: 7 // Reading wallet list
-                    }
-                  });
-
-                  this.walletd.listWallets(true);
-
-                  this.send("set_app_data", {
-                    status: {
-                      code: 0 // Ready
-                    }
-                  });
-                  // eslint-disable-next-line
-                })
-                .catch(error => {
-                  console.error("[Backend] Error starting wallet RPC:", error);
-                  this.sendLog(
-                    "error",
-                    `Error starting wallet RPC: ${error.message || error}`
-                  );
-                  this.send("show_notification", {
-                    type: "negative",
-                    message: `Error starting wallet RPC: ${error.message ||
-                      error}`,
-                    timeout: 5000
-                  });
-                  this.send("set_app_data", {
-                    status: {
-                      code: -1 // Return to config screen
-                    }
-                  });
-                })
-                .catch(error => {
-                  console.error("[Backend] Error starting daemon:", error);
-                  this.sendLog(
-                    "error",
-                    `Error starting daemon: ${error.message || error}`
-                  );
-                  this.send("show_notification", {
-                    type: "negative",
-                    message: `Error starting daemon: ${error.message || error}`,
-                    timeout: 5000
-                  });
-                  this.send("set_app_data", {
-                    status: {
-                      code: -1 // Return to config screen
-                    }
-                  });
-                })
-                .catch(error => {
-                  console.error(
-                    "[Backend] Error checking daemon version:",
-                    error
-                  );
-                  this.sendLog(
-                    "error",
-                    `Error checking daemon version: ${error.message || error}`
-                  );
-                  this.send("show_notification", {
-                    type: "negative",
-                    message: `Error checking daemon version: ${error.message ||
-                      error}`,
-                    timeout: 5000
-                  });
-                  this.send("set_app_data", {
-                    status: {
-                      code: -1 // Return to config screen
-                    }
-                  });
-                });
-            }); // closes .then(version => { from line 603 and checkVersion() chain
-          }); // closes .then(data => { from line 550
-        })
-        .catch(error => {
-          console.error("[Backend] Error in checkRemote promise:", error);
-          this.sendLog(
-            "error",
-            `Error connecting to remote daemon: ${error.message || error}`
-          );
-          this.send("show_notification", {
-            type: "negative",
-            message: `Error connecting to remote daemon: ${error.message ||
-              error}`,
-            timeout: 5000
-          });
+      this.daemon.checkVersion().then(version => {
+        if (version) {
           this.send("set_app_data", {
             status: {
-              code: -1 // Return to config screen
+              code: 4,
+              message: version
             }
           });
-        }); // closes Promise.race().then().catch() chain
+        } else {
+          // daemon binary not found (e.g. removed by AV) — force remote mode
+          this.config_data.daemons[net_type].type = "remote";
+          this.send("set_app_data", {
+            status: { code: 5 },
+            config: this.config_data,
+            pending_config: this.config_data
+          });
+        }
+
+        this.daemon.start(this.config_data).then(() => {
+          this.send("set_app_data", { status: { code: 6 } }); // Starting wallet
+
+          this.walletd
+            .start(this.config_data)
+            .then(() => {
+              this.send("set_app_data", { status: { code: 7 } }); // Reading wallet list
+              this.walletd.listWallets(true);
+              this.send("set_app_data", { status: { code: 0 } }); // Ready
+            })
+            .catch(error => {
+              console.error("[Backend] Error starting wallet RPC:", error);
+              this.sendLog("error", `Error starting wallet RPC: ${error.message || error}`);
+              this.send("show_notification", {
+                type: "negative",
+                message: `Error starting wallet RPC: ${error.message || error}`,
+                timeout: 5000
+              });
+              this.send("set_app_data", { status: { code: -1 } });
+            });
+        }).catch(error => {
+          // Daemon unreachable — still start wallet-rpc so users can create wallets offline
+          const msg = error && error.message ? error.message : String(error || "unknown");
+          this.sendLog("warn", `Daemon unreachable: ${msg}. Attempting offline mode.`);
+          this.send("show_notification", {
+            type: "warning",
+            message: "Could not connect to daemon. You can still create a new wallet.",
+            timeout: 6000
+          });
+          this.send("set_app_data", { status: { code: 6 } }); // Starting wallet...
+          this.walletd
+            .start(this.config_data)
+            .then(() => {
+              this.send("set_app_data", { status: { code: 7 } });
+              this.walletd.listWallets(true);
+              this.send("set_app_data", { status: { code: 8 } }); // Offline mode — route to wallet-select
+            })
+            .catch(walletError => {
+              const wMsg = walletError && walletError.message ? walletError.message : String(walletError || "unknown");
+              this.sendLog("error", `Wallet RPC also failed in offline mode: ${wMsg}`);
+              this.send("show_notification", {
+                type: "negative",
+                message: `Could not start wallet: ${wMsg}`,
+                timeout: 5000
+              });
+              this.send("set_app_data", { status: { code: -1 } });
+            });
+        });
+      }).catch(error => {
+        console.error("[Backend] Error checking daemon version:", error);
+        this.sendLog("error", `Error checking daemon version: ${error.message || error}`);
+        this.send("show_notification", {
+          type: "negative",
+          message: `Error checking daemon version: ${error.message || error}`,
+          timeout: 5000
+        });
+        this.send("set_app_data", { status: { code: -1 } });
+      });
     }); // closes fs.readFile callback
   } // closes startup() method
 

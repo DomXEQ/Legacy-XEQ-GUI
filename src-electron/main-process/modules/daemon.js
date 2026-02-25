@@ -1,6 +1,5 @@
 import child_process from "child_process";
 
-const request = require("request-promise");
 const queue = require("promise-queue");
 const http = require("http");
 const fs = require("fs");
@@ -706,27 +705,29 @@ export class Daemon {
     const hostname = options.hostname || this.hostname;
     const port = options.port || this.port;
 
-    let requestOptions = {
-      uri: `${protocol}${hostname}:${port}/json_rpc`,
-      method: "POST",
-      json: {
-        jsonrpc: "2.0",
-        id: id,
-        method: method
-      },
-      agent: this.agent
+    const url = `${protocol}${hostname}:${port}/json_rpc`;
+    const body = {
+      jsonrpc: "2.0",
+      id: id,
+      method: method
     };
     if (Object.keys(params).length !== 0) {
-      requestOptions.json.params = params;
+      body.params = params;
     }
 
-    // If there's a timeout then set it
+    const fetchOptions = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      agent: this.agent
+    };
     if (options.timeout) {
-      requestOptions.timeout = options.timeout;
+      fetchOptions.signal = AbortSignal.timeout(options.timeout);
     }
 
     return this.queue.add(() => {
-      return request(requestOptions)
+      return fetch(url, fetchOptions)
+        .then(res => res.json())
         .then(response => {
           if (response.hasOwnProperty("error")) {
             return {

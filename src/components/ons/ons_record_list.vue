@@ -1,5 +1,5 @@
 <template>
-  <q-list link no-border class="ons-record-list">
+  <q-list class="ons-record-list">
     <q-item
       v-for="record in recordList"
       :key="record.name_hash"
@@ -18,7 +18,7 @@
       </q-item-section>
       <q-item-section side class="height">
         <template v-if="isLocked(record)">{{
-          record.update_height | blockHeight
+          formatBlockHeight(record.update_height)
         }}</template>
         <template v-else>
           <q-item-section>
@@ -40,10 +40,10 @@
       </q-item-section>
       <q-item-section v-if="!isLocked(record)" side>
         <span v-if="record.type === 'session' || record.type === 'wallet'">{{
-          record.update_height | blockHeight
+          formatBlockHeight(record.update_height)
         }}</span>
         <span v-else class="lokinet-expiration">{{
-          record.expiration_height | expirationHeight
+          formatExpirationHeight(record.expiration_height)
         }}</span>
       </q-item-section>
       <ContextMenu
@@ -64,9 +64,7 @@
 
 <script>
 import { mapState } from "vuex";
-import { i18n } from "boot/i18n";
 import ContextMenu from "components/menus/contextmenu";
-const { clipboard } = require("electron");
 
 export default {
   name: "ONSRecordList",
@@ -86,17 +84,13 @@ export default {
   computed: mapState({
     theme: state => state.gateway.app.config.appearance.theme
   }),
-  filters: {
-    blockHeight(value) {
-      const heightString = i18n.t("strings.blockHeight");
-      return `${heightString}: ${value}`;
-    },
-    expirationHeight(value) {
-      const expirationHeightString = i18n.t("strings.expirationHeight");
-      return `${expirationHeightString}: ${value}`;
-    }
-  },
   methods: {
+    formatBlockHeight(value) {
+      return `${this.$t("strings.blockHeight")}: ${value}`;
+    },
+    formatExpirationHeight(value) {
+      return `${this.$t("strings.expirationHeight")}: ${value}`;
+    },
     isLocked(record) {
       return !record.name || !record.value;
     },
@@ -155,7 +149,7 @@ export default {
     },
     copy(value, message) {
       if (!value) return;
-      clipboard.writeText(value.trim());
+      window.electronAPI.copyToClipboard(value.trim());
       this.$q.notify({
         type: "positive",
         timeout: 2000,

@@ -3,7 +3,7 @@
     <div class="fields q-mx-md q-mt-md">
       <OxenField
         :label="$t('fieldLabels.walletName')"
-        :error="$v.wallet.name.$error"
+        :error="v$.wallet.name.$error"
       >
         <q-input
           v-model="wallet.name"
@@ -12,18 +12,7 @@
           borderless
           dense
           @keyup.enter="create"
-          @blur="$v.wallet.name.$touch"
-        />
-      </OxenField>
-
-      <OxenField :label="$t('fieldLabels.seedLanguage')">
-        <q-select
-          v-model="wallet.language"
-          :options="languageOptions"
-          borderless
-          dense
-          emit-value
-          map-options
+          @blur="v$.wallet.name.$touch"
         />
       </OxenField>
 
@@ -65,7 +54,10 @@
           v-model="wallet.language"
           :options="languageOptions"
           :dark="theme == 'dark'"
-          hide-underline
+          borderless
+          dense
+          emit-value
+          map-options
         />
       </OxenField>
 
@@ -81,10 +73,14 @@
 </template>
 
 <script>
-import { required } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required } from "@vuelidate/validators";
 import { mapState } from "vuex";
 import OxenField from "components/oxen_field";
 export default {
+  setup() {
+    return { v$: useVuelidate() };
+  },
   components: {
     OxenField
   },
@@ -114,35 +110,36 @@ export default {
       languageOptions
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    status: state => state.gateway.wallet.status
-  }),
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      status: state => state.gateway.wallet.status
+    }),
+    statusCode() {
+      return this.status ? this.status.code : 1;
+    }
+  },
   watch: {
-    status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case 1:
-            break;
-          case 0:
-            this.$q.loading.hide();
-            this.$router.replace({
-              path: "/wallet-select/created"
-            });
-            break;
-          default:
-            this.$q.loading.hide();
-            this.$q.notify({
-              type: "negative",
-              timeout: 1000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+    statusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case 1:
+          break;
+        case 0:
+          this.$q.loading.hide();
+          this.$router.replace({
+            path: "/wallet-select/created"
+          });
+          break;
+        default:
+          this.$q.loading.hide();
+          this.$q.notify({
+            type: "negative",
+            timeout: 1000,
+            message: this.status.message || ""
+          });
+          break;
+      }
     }
   },
   validations: {
@@ -158,9 +155,9 @@ export default {
       this.$gateway.send("wallet", "create_wallet", this.wallet);
     },
     create() {
-      this.$v.wallet.$touch();
+      this.v$.wallet.$touch();
 
-      if (this.$v.wallet.$error) {
+      if (this.v$.wallet.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,

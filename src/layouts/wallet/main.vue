@@ -78,9 +78,11 @@
           </router-link>
         </div>
         <div class="hr-separator" />
-        <keep-alive>
-          <router-view />
-        </keep-alive>
+        <router-view v-slot="{ Component }">
+          <keep-alive :max="10">
+            <component :is="Component" />
+          </keep-alive>
+        </router-view>
       </div>
     </q-page-container>
 

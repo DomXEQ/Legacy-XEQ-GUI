@@ -1,38 +1,49 @@
-import VueI18n from "vue-i18n";
+import { boot } from "quasar/wrappers";
+import { createI18n } from "vue-i18n";
 import messages from "src/i18n";
 import { Quasar } from "quasar";
 
 let i18n;
 
-export default ({ app, Vue }) => {
-  Vue.use(VueI18n);
-
-  // Set i18n instance on app
-  app.i18n = new VueI18n({
+export default boot(({ app }) => {
+  i18n = createI18n({
     locale: "en-us",
     fallbackLocale: "en-us",
-    messages
+    messages,
+    legacy: true,
+    globalInjection: true
   });
 
-  i18n = app.i18n;
-};
+  app.use(i18n);
+});
+
+const langModules = import.meta.glob("../i18n/*.js");
 
 const changeLanguage = lang => {
-  const quasarLang = Quasar.lang;
   return new Promise((resolve, reject) => {
-    import(`src/i18n/${lang}`)
-      .then(({ default: messages }) => {
-        i18n.locale = lang;
-        i18n.setLocaleMessage(lang, messages);
+    const loader = langModules[`../i18n/${lang}.js`];
+    if (!loader) {
+      reject(new Error("Language not found"));
+      return;
+    }
+    loader()
+      .then(({ default: langMessages }) => {
+        i18n.global.locale = lang;
+        i18n.global.setLocaleMessage(lang, langMessages);
 
-        // Setting the quasar language is optional
-        // There may be cases where they don't have the language
-        import(`quasar/lang/${lang}`)
+        // Quasar language files use different naming (e.g., en-US not en-us)
+        const quasarLangMap = {
+          "en-us": "en-US",
+          "pt-br": "pt-BR",
+          "zh-cn": "zh-CN"
+        };
+        const quasarLang = quasarLangMap[lang] || lang;
+        import(/* @vite-ignore */ `quasar/lang/${quasarLang}`)
           .then(resultLang => {
-            quasarLang.set(resultLang.default);
+            Quasar.lang.set(resultLang.default);
           })
           .catch(() => {
-            console.warn(`Failed to set quasar language: ${lang}`);
+            // Silently fail - English is the default anyway
           })
           .finally(() => {
             resolve(lang);

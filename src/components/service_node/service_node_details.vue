@@ -172,7 +172,6 @@
 </template>
 
 <script>
-const { clipboard } = require("electron");
 import { mapState } from "vuex";
 import { date } from "quasar";
 import FormatOxen from "components/format_oxen";
@@ -260,7 +259,7 @@ export default {
       return date.formatDate(timestamp, "YYYY-MM-DD hh:mm a");
     },
     copyAddress(address) {
-      clipboard.writeText(address);
+      window.electronAPI.copyToClipboard(address);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

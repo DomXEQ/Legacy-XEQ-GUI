@@ -1,5 +1,5 @@
 <template>
-  <q-item @click.native="openWallet(wallet)">
+  <q-item clickable v-ripple @click="openWallet(wallet)">
     <q-item-section avatar>
       <q-icon class="wallet-icon">
         <svg
@@ -45,10 +45,14 @@
 </template>
 
 <script>
-const { clipboard } = require("electron");
 import { mapState } from "vuex";
+import ContextMenu from "components/menus/contextmenu";
+
 export default {
   name: "WalletListItem",
+  components: {
+    ContextMenu
+  },
   props: {
     wallet: {
       type: Object,
@@ -59,6 +63,14 @@ export default {
       required: true
     }
   },
+  data() {
+    return {
+      menuItems: [
+        { action: "openWallet", i18n: "menuItems.openWallet" },
+        { action: "copyAddress", i18n: "menuItems.copyAddress" }
+      ]
+    };
+  },
   computed: mapState({
     theme: state => state.gateway.app.config.appearance.theme,
     info: state => state.gateway.wallet.info
@@ -66,13 +78,14 @@ export default {
   methods: {
     copyAddress() {
       event.stopPropagation();
-      for (let i = 0; i < event.path.length; i++) {
-        if (event.path[i].tagName == "BUTTON") {
-          event.path[i].blur();
+      const path = event.composedPath ? event.composedPath() : event.path || [];
+      for (let i = 0; i < path.length; i++) {
+        if (path[i].tagName == "BUTTON") {
+          path[i].blur();
           break;
         }
       }
-      clipboard.writeText(this.wallet.address);
+      window.electronAPI.copyToClipboard(this.wallet.address);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

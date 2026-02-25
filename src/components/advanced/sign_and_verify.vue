@@ -91,7 +91,6 @@
 </template>
 
 <script>
-const { clipboard } = require("electron");
 import OxenField from "components/oxen_field";
 import SignatureDialog from "./signature_dialog";
 import { mapState } from "vuex";
@@ -110,60 +109,60 @@ export default {
       address: ""
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    sign_status: state => state.gateway.sign_status,
-    verify_status: state => state.gateway.verify_status,
-    signature: state => state.gateway.sign_status.signature,
-    primary_address: state => state.gateway.wallet.info.address,
-    is_view_only: state => state.gateway.wallet.info.view_only,
-    canClear() {
-      const canClear =
-        this.signatureToVerify !== "" ||
-        this.address !== "" ||
-        this.unsignedData !== "";
-      return canClear;
-    }
-  }),
-  watch: {
-    sign_status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case -1:
-            this.$q.notify({
-              type: "negative",
-              timeout: 3000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      sign_status: state => state.gateway.sign_status,
+      verify_status: state => state.gateway.verify_status,
+      signature: state => state.gateway.sign_status.signature,
+      primary_address: state => state.gateway.wallet.info.address,
+      is_view_only: state => state.gateway.wallet.info.view_only,
+      canClear() {
+        const canClear =
+          this.signatureToVerify !== "" ||
+          this.address !== "" ||
+          this.unsignedData !== "";
+        return canClear;
+      }
+    }),
+    signStatusCode() {
+      return this.sign_status ? this.sign_status.code : 0;
     },
-    verify_status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message, i18n } = val;
-        switch (code) {
-          case -1:
-            this.$q.notify({
-              type: "negative",
-              timeout: 3000,
-              message: i18n ? this.$t(i18n) : message
-            });
-            break;
-          case 1:
-            this.$q.notify({
-              type: "positive",
-              timeout: 3000,
-              message: i18n ? this.$t(i18n) : message
-            });
-            break;
-        }
-      },
-      deep: true
+    verifyStatusCode() {
+      return this.verify_status ? this.verify_status.code : 0;
+    }
+  },
+  watch: {
+    signStatusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case -1:
+          this.$q.notify({
+            type: "negative",
+            timeout: 3000,
+            message: this.sign_status.message || ""
+          });
+          break;
+      }
+    },
+    verifyStatusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case -1:
+          this.$q.notify({
+            type: "negative",
+            timeout: 3000,
+            message: this.verify_status.i18n ? this.$t(this.verify_status.i18n) : (this.verify_status.message || "")
+          });
+          break;
+        case 1:
+          this.$q.notify({
+            type: "positive",
+            timeout: 3000,
+            message: this.verify_status.i18n ? this.$t(this.verify_status.i18n) : (this.verify_status.message || "")
+          });
+          break;
+      }
     }
   },
   methods: {
@@ -178,7 +177,7 @@ export default {
       });
     },
     copySignature() {
-      clipboard.writeText(this.signature);
+      window.electronAPI.copyToClipboard(this.signature);
       this.$q.notify({
         type: "positive",
         timeout: 2000,
@@ -187,7 +186,7 @@ export default {
     },
     // copy from the dialog
     copyUnsignedData() {
-      clipboard.writeText(this.toSign);
+      window.electronAPI.copyToClipboard(this.toSign);
       this.$q.notify({
         type: "positive",
         timeout: 2000,
@@ -195,7 +194,7 @@ export default {
       });
     },
     copyAddress() {
-      clipboard.writeText(this.primary_address);
+      window.electronAPI.copyToClipboard(this.primary_address);
       this.$q.notify({
         type: "positive",
         timeout: 2000,

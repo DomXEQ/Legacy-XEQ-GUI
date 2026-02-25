@@ -33,15 +33,16 @@
 </template>
 
 <script>
-import { clipboard } from "electron";
 import { mapState } from "vuex";
-import { required } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required } from "@vuelidate/validators";
 import { service_node_key } from "src/validators/common";
 import WalletPassword from "src/mixins/wallet_password";
 import ServiceNodeDetails from "./service_node_details";
 import ServiceNodeList from "./service_node_list";
 
 export default {
+  setup() { return { v$: useVuelidate() }; },
   name: "ServiceNodeUnlock",
   components: {
     ServiceNodeDetails,
@@ -57,99 +58,100 @@ export default {
       menuItems
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    unlock_status: state => state.gateway.service_node_status.unlock,
-    our_address: state => {
-      const primary = state.gateway.wallet.address_list.primary[0];
-      return (primary && primary.address) || null;
-    },
-    // just SNs the user has contributed to
-    service_nodes(state) {
-      let nodes = state.gateway.daemon.service_nodes.nodes;
-      // don't count reserved nodes in my stakes (where they are a contributor of amount 0)
-      const getOurContribution = node =>
-        node.contributors.find(
-          c => c.address === this.our_address && c.amount > 0
-        );
-      return nodes
-        .filter(getOurContribution)
-        .sort((a, b) => {
-          if (a.service_node_pubkey < b.service_node_pubkey) return -1;
-          if (a.service_node_pubkey > b.service_node_pubkey) return 1;
-          return 0;
-        })
-        .map(n => {
-          const ourContribution = getOurContribution(n);
-          return {
-            ...n,
-            ourContributionAmount: ourContribution.amount
-          };
-        });
-    },
-    fetching: state => state.gateway.daemon.service_nodes.fetching
-  }),
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      unlock_status: state => state.gateway.service_node_status.unlock,
+      our_address: state => {
+        const primary = state.gateway.wallet.address_list.primary[0];
+        return (primary && primary.address) || null;
+      },
+      // just SNs the user has contributed to
+      service_nodes(state) {
+        let nodes = state.gateway.daemon.service_nodes.nodes;
+        // don't count reserved nodes in my stakes (where they are a contributor of amount 0)
+        const getOurContribution = node =>
+          node.contributors.find(
+            c => c.address === this.our_address && c.amount > 0
+          );
+        return nodes
+          .filter(getOurContribution)
+          .sort((a, b) => {
+            if (a.service_node_pubkey < b.service_node_pubkey) return -1;
+            if (a.service_node_pubkey > b.service_node_pubkey) return 1;
+            return 0;
+          })
+          .map(n => {
+            const ourContribution = getOurContribution(n);
+            return {
+              ...n,
+              ourContributionAmount: ourContribution.amount
+            };
+          });
+      },
+      fetching: state => state.gateway.daemon.service_nodes.fetching
+    }),
+    unlockStatusCode() {
+      return this.unlock_status ? this.unlock_status.code : 0;
+    }
+  },
   validations: {
     node_key: { required, service_node_key }
   },
   watch: {
-    unlock_status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case 0:
-            this.key = null;
-            this.password = null;
+    unlockStatusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case 0:
+          this.key = null;
+          this.password = null;
 
-            this.$q.notify({
-              type: "positive",
-              timeout: 1000,
-              message
-            });
-            this.$v.$reset();
-            break;
-          case 1:
-            // Tell the user to confirm
-            this.$q
-              .dialog({
-                title: this.$t("dialog.unlockServiceNode.confirmTitle"),
-                message,
-                ok: {
-                  label: this.$t("dialog.unlockServiceNode.ok"),
-                  color: "primary"
-                },
-                cancel: {
-                  flat: true,
-                  label: this.$t("dialog.buttons.cancel"),
-                  color: this.theme == "dark" ? "white" : "dark"
-                },
-                style: "min-width: 500px; overflow-wrap: break-word;",
-                dark: this.theme == "dark",
+          this.$q.notify({
+            type: "positive",
+            timeout: 1000,
+            message: this.unlock_status.message || ""
+          });
+          this.v$.$reset();
+          break;
+        case 1:
+          // Tell the user to confirm
+          this.$q
+            .dialog({
+              title: this.$t("dialog.unlockServiceNode.confirmTitle"),
+              message: this.unlock_status.message || "",
+              ok: {
+                label: this.$t("dialog.unlockServiceNode.ok"),
+                color: "primary"
+              },
+              cancel: {
+                flat: true,
+                label: this.$t("dialog.buttons.cancel"),
                 color: this.theme == "dark" ? "white" : "dark"
-              })
-              .onOk(() => {
-                let password = this.password || "";
-                this.gatewayUnlock(password, this.key, true);
-              })
-              .onDismiss(() => null)
-              .onCancel(() => null);
-            break;
-          case -1:
-            this.key = null;
-            this.password = null;
+              },
+              style: "min-width: 500px; overflow-wrap: break-word;",
+              dark: this.theme == "dark",
+              color: this.theme == "dark" ? "white" : "dark"
+            })
+            .onOk(() => {
+              let password = this.password || "";
+              this.gatewayUnlock(password, this.key, true);
+            })
+            .onDismiss(() => null)
+            .onCancel(() => null);
+          break;
+        case -1:
+          this.key = null;
+          this.password = null;
 
-            this.$q.notify({
-              type: "negative",
-              timeout: 3000,
-              message
-            });
-            break;
-          default:
-            break;
-        }
-      },
-      deep: true
+          this.$q.notify({
+            type: "negative",
+            timeout: 3000,
+            message: this.unlock_status.message || ""
+          });
+          break;
+        default:
+          break;
+      }
     }
   },
   methods: {
@@ -223,7 +225,7 @@ export default {
       });
     },
     copyKey(key) {
-      clipboard.writeText(key);
+      window.electronAPI.copyToClipboard(key);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

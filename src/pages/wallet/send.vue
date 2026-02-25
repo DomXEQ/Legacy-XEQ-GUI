@@ -12,7 +12,7 @@
           <div class="col-12 amount">
             <OxenField
               :label="$t('fieldLabels.amount')"
-              :error="$v.newTx.amount.$error"
+              :error="v$.newTx.amount.$error"
             >
               <q-input
                 v-model="newTx.amount"
@@ -22,7 +22,7 @@
                 placeholder="0"
                 borderless
                 dense
-                @blur="$v.newTx.amount.$touch"
+                @blur="v$.newTx.amount.$touch"
               />
               <q-btn
                 color="primary"
@@ -52,14 +52,14 @@
         <div class="col q-mt-sm">
           <OxenField
             :label="$t('fieldLabels.address')"
-            :error="$v.newTx.address.$error"
+            :error="v$.newTx.address.$error"
           >
             <q-input
               v-model.trim="newTx.address"
               :placeholder="address_placeholder"
               borderless
               dense
-              @blur="$v.newTx.address.$touch"
+              @blur="v$.newTx.address.$touch"
             />
             <q-btn color="primary" to="addressbook">
               {{ $t("buttons.contacts") }}
@@ -135,19 +135,20 @@
 
 <script>
 import { mapState } from "vuex";
-import { required, decimal } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required, decimal } from "@vuelidate/validators";
 import { address, greater_than_zero } from "src/validators/common";
 import OxenField from "components/oxen_field";
 import WalletPassword from "src/mixins/wallet_password";
 import ConfirmDialogMixin from "src/mixins/confirm_dialog_mixin";
 import ConfirmTransactionDialog from "components/confirm_tx_dialog";
-const { clipboard } = require("electron");
-const objectAssignDeep = require("object-assign-deep");
+import objectAssignDeep from "object-assign-deep";
 
 // the case for doing nothing on a tx_status update
 const DO_NOTHING = 10;
 
 export default {
+  setup() { return { v$: useVuelidate() }; },
   components: {
     OxenField,
     ConfirmTransactionDialog
@@ -178,24 +179,29 @@ export default {
       }
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    view_only: state => state.gateway.wallet.info.view_only,
-    unlocked_balance: state => state.gateway.wallet.info.unlocked_balance,
-    tx_status: state => state.gateway.tx_status,
-    is_ready() {
-      return this.$store.getters["gateway/isReady"];
-    },
-    is_able_to_send() {
-      return this.$store.getters["gateway/isAbleToSend"];
-    },
-    address_placeholder(state) {
-      const wallet = state.gateway.wallet.info;
-      const prefix = (wallet && wallet.address && wallet.address[0]) || "L";
-      return `${prefix}..`;
-    },
-    confirmTransaction: state => state.gateway.tx_status.code === 1
-  }),
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      view_only: state => state.gateway.wallet.info.view_only,
+      unlocked_balance: state => state.gateway.wallet.info.unlocked_balance,
+      tx_status: state => state.gateway.tx_status,
+      is_ready() {
+        return this.$store.getters["gateway/isReady"];
+      },
+      is_able_to_send() {
+        return this.$store.getters["gateway/isAbleToSend"];
+      },
+      address_placeholder(state) {
+        const wallet = state.gateway.wallet.info;
+        const prefix = (wallet && wallet.address && wallet.address[0]) || "L";
+        return `${prefix}..`;
+      },
+      confirmTransaction: state => state.gateway.tx_status.code === 1
+    }),
+    txStatusCode() {
+      return this.tx_status ? this.tx_status.code : DO_NOTHING;
+    }
+  },
   validations: {
     newTx: {
       amount: {
@@ -218,104 +224,101 @@ export default {
     }
   },
   watch: {
-    tx_status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          // the "nothing", so we can update state without doing anything
-          // in particular
-          case DO_NOTHING:
-            break;
-          case 1:
-            this.buildDialogFieldsSend(val);
-            break;
-          case 0:
-            // Show TXID if available
-            if (val.txid) {
-              const sentTxid = val.txid;
-              this.$q
-                .dialog({
-                  title:
-                    this.$t("titles.transactionSent") || "Transaction Sent",
-                  message: `
-                  <div style="text-align: center; margin-bottom: 16px;">
-                    <div style="font-size: 14px; color: #00ff88; margin-bottom: 12px;">
-                      ✓ ${message}
-                    </div>
-                    <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-                      Transaction ID
-                    </div>
-                    <div id="txid-display" style="
-                      background: #0a0e14;
-                      border: 1px solid rgba(0, 212, 255, 0.2);
-                      border-radius: 8px;
-                      padding: 12px;
-                      font-family: 'JetBrains Mono', monospace;
-                      font-size: 13px;
-                      word-break: break-all;
-                      user-select: all;
-                      color: rgba(255,255,255,0.92);
-                    ">${sentTxid}</div>
-                    <div style="
-                      margin-top: 14px;
-                      padding: 10px;
-                      background: rgba(255, 170, 0, 0.08);
-                      border: 1px solid rgba(255, 170, 0, 0.25);
-                      border-radius: 6px;
-                      font-size: 12px;
-                      color: rgba(255, 255, 255, 0.7);
-                      line-height: 1.5;
-                    ">
-                      <strong style="color: #ffaa00;">IMPORTANT:</strong> Save your Transaction ID above. You will need it to generate a proof for the swap portal.<br><br>
-                      Your remaining balance will be temporarily locked while the transaction confirms. Funds typically unlock after <span style="color: #ffaa00; font-weight: 600;">~10 blocks (~20 minutes)</span>.
-                    </div>
+    txStatusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        // the "nothing", so we can update state without doing anything
+        // in particular
+        case DO_NOTHING:
+          break;
+        case 1:
+          this.buildDialogFieldsSend(this.tx_status);
+          break;
+        case 0:
+          // Show TXID if available
+          if (this.tx_status.txid) {
+            const sentTxid = this.tx_status.txid;
+            const message = this.tx_status.message || "";
+            this.$q
+              .dialog({
+                title:
+                  this.$t("titles.transactionSent") || "Transaction Sent",
+                message: `
+                <div style="text-align: center; margin-bottom: 16px;">
+                  <div style="font-size: 14px; color: #00ff88; margin-bottom: 12px;">
+                    ✓ ${message}
                   </div>
-                `,
-                  html: true,
-                  ok: {
-                    label: "COPY TXID & CLOSE",
-                    color: "primary"
-                  }
-                })
-                .onOk(() => {
-                  clipboard.writeText(sentTxid);
-                  this.$q.notify({
-                    type: "positive",
-                    timeout: 2000,
-                    message: "Transaction ID copied to clipboard"
-                  });
+                  <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Transaction ID
+                  </div>
+                  <div id="txid-display" style="
+                    background: #0a0e14;
+                    border: 1px solid rgba(0, 212, 255, 0.2);
+                    border-radius: 8px;
+                    padding: 12px;
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 13px;
+                    word-break: break-all;
+                    user-select: all;
+                    color: rgba(255,255,255,0.92);
+                  ">${sentTxid}</div>
+                  <div style="
+                    margin-top: 14px;
+                    padding: 10px;
+                    background: rgba(255, 170, 0, 0.08);
+                    border: 1px solid rgba(255, 170, 0, 0.25);
+                    border-radius: 6px;
+                    font-size: 12px;
+                    color: rgba(255, 255, 255, 0.7);
+                    line-height: 1.5;
+                  ">
+                    <strong style="color: #ffaa00;">IMPORTANT:</strong> Save your Transaction ID above. You will need it to generate a proof for the swap portal.<br><br>
+                    Your remaining balance will be temporarily locked while the transaction confirms. Funds typically unlock after <span style="color: #ffaa00; font-weight: 600;">~10 blocks (~20 minutes)</span>.
+                  </div>
+                </div>
+              `,
+                html: true,
+                ok: {
+                  label: "COPY TXID & CLOSE",
+                  color: "primary"
+                }
+              })
+              .onOk(() => {
+                window.electronAPI.copyToClipboard(sentTxid);
+                this.$q.notify({
+                  type: "positive",
+                  timeout: 2000,
+                  message: "Transaction ID copied to clipboard"
                 });
-            } else {
-              this.$q.notify({
-                type: "positive",
-                timeout: 1000,
-                message
               });
-            }
-            this.$v.$reset();
-            this.newTx = {
-              amount: 0,
-              address: "",
-              priority: 1,
-              address_book: {
-                save: false,
-                name: "",
-                description: ""
-              },
-              note: ""
-            };
-            break;
-          case -1:
+          } else {
             this.$q.notify({
-              type: "negative",
-              timeout: 3000,
-              message
+              type: "positive",
+              timeout: 1000,
+              message: this.tx_status.message || ""
             });
-            break;
-        }
-      },
-      deep: true
+          }
+          this.v$.$reset();
+          this.newTx = {
+            amount: 0,
+            address: "",
+            priority: 1,
+            address_book: {
+              save: false,
+              name: "",
+              description: ""
+            },
+            note: ""
+          };
+          break;
+        case -1:
+          this.$q.notify({
+            type: "negative",
+            timeout: 3000,
+            message: this.tx_status.message || ""
+          });
+          break;
+      }
     },
     $route(to) {
       if (to.path == "/wallet/send" && to.query.hasOwnProperty("address")) {
@@ -380,7 +383,7 @@ export default {
     },
 
     async send() {
-      this.$v.newTx.$touch();
+      this.v$.newTx.$touch();
 
       if (this.newTx.amount < 0) {
         this.$q.notify({
@@ -403,7 +406,7 @@ export default {
           message: this.$t("notification.errors.notEnoughBalance")
         });
         return;
-      } else if (this.$v.newTx.amount.$error) {
+      } else if (this.v$.newTx.amount.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -412,7 +415,7 @@ export default {
         return;
       }
 
-      if (this.$v.newTx.address.$error) {
+      if (this.v$.newTx.address.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,

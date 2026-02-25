@@ -4,7 +4,7 @@
       <q-item
         v-for="node in serviceNodes"
         :key="node.service_node_pubkey"
-        @click.native="details(nodeWithMinContribution(node))"
+        @click="details(nodeWithMinContribution(node))"
       >
         <q-item-section>
           <q-item-label class="ellipsis"
@@ -68,7 +68,6 @@
 </template>
 
 <script>
-import { clipboard } from "electron";
 import ContextMenu from "components/menus/contextmenu";
 import FormatOxen from "components/format_oxen";
 import ServiceNodeMixin from "src/mixins/service_node_mixin";
@@ -147,7 +146,7 @@ export default {
       )}`;
     },
     copyKey(key) {
-      clipboard.writeText(key);
+      window.electronAPI.copyToClipboard(key);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

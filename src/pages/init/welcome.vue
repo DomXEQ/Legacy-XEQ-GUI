@@ -94,7 +94,8 @@ export default {
     theme: state => state.gateway.app.config.appearance.theme,
     pending_config: state => state.gateway.app.pending_config,
     config_daemon() {
-      return this.pending_config.daemons[this.pending_config.app.net_type];
+      if (!this.pending_config.daemons || !this.pending_config.app) return {};
+      return this.pending_config.daemons[this.pending_config.app.net_type] || {};
     },
     daemon: state => state.gateway.daemon,
 

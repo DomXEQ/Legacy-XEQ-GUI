@@ -237,7 +237,6 @@
 </template>
 
 <script>
-const { clipboard } = require("electron");
 import { mapState } from "vuex";
 import { date } from "quasar";
 import TxTypeIcon from "components/tx_type_icon";
@@ -371,7 +370,7 @@ export default {
       return date.formatDate(timestamp, "YYYY-MM-DD hh:mm a");
     },
     copyAddress(address) {
-      clipboard.writeText(address);
+      window.electronAPI.copyToClipboard(address);
       this.$q.notify({
         type: "positive",
         timeout: 1000,
@@ -379,7 +378,7 @@ export default {
       });
     },
     copyTxId() {
-      clipboard.writeText(this.tx.txid);
+      window.electronAPI.copyToClipboard(this.tx.txid);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

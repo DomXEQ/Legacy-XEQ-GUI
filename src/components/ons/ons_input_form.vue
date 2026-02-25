@@ -19,7 +19,7 @@
       <OxenField
         :label="$t('fieldLabels.name')"
         :disable="disableName"
-        :error="$v.record.name.$error"
+        :error="v$.record.name.$error"
       >
         <q-input
           v-model.trim="record.name"
@@ -31,7 +31,7 @@
           :suffix="
             record.type === 'session' || record.type === 'wallet' ? '' : '.loki'
           "
-          @blur="$v.record.name.$touch"
+          @blur="v$.record.name.$touch"
         />
       </OxenField>
     </div>
@@ -41,7 +41,7 @@
       <OxenField
         class="q-mt-md"
         :label="value_field_label"
-        :error="$v.record.value.$error"
+        :error="v$.record.value.$error"
       >
         <q-input
           v-model.trim="record.value"
@@ -53,7 +53,7 @@
           :suffix="
             record.type === 'session' || record.type === 'wallet' ? '' : '.loki'
           "
-          @blur="$v.record.value.$touch"
+          @blur="v$.record.value.$touch"
         />
       </OxenField>
     </div>
@@ -63,7 +63,7 @@
       <OxenField
         class="q-mt-md"
         :label="$t('fieldLabels.owner')"
-        :error="$v.record.owner.$error"
+        :error="v$.record.owner.$error"
         optional
       >
         <q-input
@@ -73,7 +73,7 @@
           borderless
           dense
           :disable="renewing"
-          @blur="$v.record.owner.$touch"
+          @blur="v$.record.owner.$touch"
         />
       </OxenField>
     </div>
@@ -83,7 +83,7 @@
       <OxenField
         class="q-mt-md"
         :label="$t('fieldLabels.backupOwner')"
-        :error="$v.record.backup_owner.$error"
+        :error="v$.record.backup_owner.$error"
         optional
       >
         <q-input
@@ -93,7 +93,7 @@
           :disable="renewing"
           borderless
           dense
-          @blur="$v.record.backup_owner.$touch"
+          @blur="v$.record.backup_owner.$touch"
         />
       </OxenField>
     </div>
@@ -115,7 +115,8 @@
 </template>
 <script>
 import { mapState } from "vuex";
-import { required, maxLength } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required, maxLength } from "@vuelidate/validators";
 import {
   address,
   session_id,
@@ -127,6 +128,7 @@ import OxenField from "components/oxen_field";
 import WalletPassword from "src/mixins/wallet_password";
 
 export default {
+  setup() { return { v$: useVuelidate() }; },
   name: "ONSInputForm",
   components: {
     OxenField
@@ -284,12 +286,12 @@ export default {
     reset() {
       this.initialRecord = { ...this.cleanRecord };
       this.record = { ...this.cleanRecord };
-      this.$v.$reset();
+      this.v$.$reset();
     },
     submit() {
-      this.$v.record.$touch();
+      this.v$.record.$touch();
 
-      const nameValidator = this.$v.record.name;
+      const nameValidator = this.v$.record.name;
       if (nameValidator.$error) {
         let message;
         if (!nameValidator.required) {
@@ -310,7 +312,7 @@ export default {
         return;
       }
 
-      if (this.$v.record.value.$error) {
+      if (this.v$.record.value.$error) {
         let message = "Invalid value provided";
         if (this.record.type === "session") {
           message = this.$t("notification.errors.invalidSessionId");
@@ -323,7 +325,7 @@ export default {
         return;
       }
 
-      if (this.$v.record.backup_owner.$error) {
+      if (this.v$.record.backup_owner.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 3000,
@@ -332,7 +334,7 @@ export default {
         return;
       }
 
-      if (this.$v.record.owner.$error) {
+      if (this.v$.record.owner.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 3000,

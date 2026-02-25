@@ -30,14 +30,14 @@
         <div class="address-book-modal q-mx-md">
           <OxenField
             :label="$t('fieldLabels.address')"
-            :error="$v.newEntry.address.$error"
+            :error="v$.newEntry.address.$error"
           >
             <q-input
               v-model.trim="newEntry.address"
               :placeholder="address_placeholder"
               borderless
               dense
-              @blur="$v.newEntry.address.$touch"
+              @blur="v$.newEntry.address.$touch"
             />
             <q-btn
               v-model="newEntry.starred"
@@ -136,9 +136,13 @@ import AddressHeader from "components/address_header";
 import TxList from "components/tx_list";
 import OxenField from "components/oxen_field";
 import { address } from "src/validators/common";
-import { required } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required } from "@vuelidate/validators";
 export default {
   name: "AddressBookDetails",
+  setup() {
+    return { v$: useVuelidate() };
+  },
   components: {
     AddressHeader,
     TxList,
@@ -188,9 +192,9 @@ export default {
   },
   methods: {
     save() {
-      this.$v.newEntry.$touch();
+      this.v$.newEntry.$touch();
 
-      if (this.$v.newEntry.address.$error) {
+      if (this.v$.newEntry.address.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -221,7 +225,7 @@ export default {
     },
     cancelEdit() {
       this.mode = "view";
-      this.$v.$reset();
+      this.v$.$reset();
       this.newEntry = {
         index: false,
         address: "",
@@ -236,7 +240,7 @@ export default {
     },
     close() {
       this.isVisible = false;
-      this.$v.$reset();
+      this.v$.$reset();
       this.newEntry = {
         index: false,
         address: "",

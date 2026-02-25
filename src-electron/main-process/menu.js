@@ -8,17 +8,17 @@ let template = [
       { role: "cut" },
       { role: "copy" },
       { role: "paste" },
-      { role: "pasteandmatchstyle" },
+      { role: "pasteAndMatchStyle" },
       { role: "delete" },
-      { role: "selectall" }
+      { role: "selectAll" }
     ]
   },
   {
     label: "View",
     submenu: [
-      { role: "resetzoom" },
-      { role: "zoomin" },
-      { role: "zoomout" },
+      { role: "resetZoom" },
+      { role: "zoomIn" },
+      { role: "zoomOut" },
       { type: "separator" },
       { role: "togglefullscreen" }
     ]
@@ -44,19 +44,18 @@ let template = [
 
 if (process.platform === "darwin") {
   template.unshift({
-    label: "Equilibria Wallet",
+    label: "Legacy XEQ GUI",
     submenu: [
       { role: "about" },
       { type: "separator" },
       { role: "hide" },
-      { role: "hideothers" },
+      { role: "hideOthers" },
       { role: "unhide" },
       { type: "separator" },
       { role: "quit" }
     ]
   });
 
-  // Window menu
   template[3].submenu = [
     { role: "close" },
     { role: "minimize" },

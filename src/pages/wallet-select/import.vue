@@ -3,7 +3,7 @@
     <div class="q-mx-md import-wallet">
       <OxenField
         :label="$t('fieldLabels.newWalletName')"
-        :error="$v.wallet.name.$error"
+        :error="v$.wallet.name.$error"
       >
         <q-input
           v-model="wallet.name"
@@ -12,14 +12,14 @@
           borderless
           dense
           @keyup.enter="import_wallet"
-          @blur="$v.wallet.name.$touch"
+          @blur="v$.wallet.name.$touch"
         />
       </OxenField>
 
       <OxenField
         :label="$t('fieldLabels.walletFile')"
         disable-hover
-        :error="$v.wallet.path.$error"
+        :error="v$.wallet.path.$error"
       >
         <q-input
           v-model="wallet.path"
@@ -77,10 +77,14 @@
 </template>
 
 <script>
-import { required } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required } from "@vuelidate/validators";
 import { mapState } from "vuex";
 import OxenField from "components/oxen_field";
 export default {
+  setup() {
+    return { v$: useVuelidate() };
+  },
   components: {
     OxenField
   },
@@ -94,35 +98,36 @@ export default {
       }
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    status: state => state.gateway.wallet.status
-  }),
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      status: state => state.gateway.wallet.status
+    }),
+    statusCode() {
+      return this.status ? this.status.code : 1;
+    }
+  },
   watch: {
-    status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case 1:
-            break;
-          case 0:
-            this.$q.loading.hide();
-            this.$router.replace({
-              path: "/wallet-select/created"
-            });
-            break;
-          default:
-            this.$q.loading.hide();
-            this.$q.notify({
-              type: "negative",
-              timeout: 1000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+    statusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case 1:
+          break;
+        case 0:
+          this.$q.loading.hide();
+          this.$router.replace({
+            path: "/wallet-select/created"
+          });
+          break;
+        default:
+          this.$q.loading.hide();
+          this.$q.notify({
+            type: "negative",
+            timeout: 1000,
+            message: this.status.message || ""
+          });
+          break;
+      }
     }
   },
   validations: {
@@ -139,9 +144,9 @@ export default {
       this.wallet.path = file.target.files[0].path;
     },
     import_wallet() {
-      this.$v.wallet.$touch();
+      this.v$.wallet.$touch();
 
-      if (this.$v.wallet.name.$error) {
+      if (this.v$.wallet.name.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -150,7 +155,7 @@ export default {
         return;
       }
 
-      if (this.$v.wallet.path.$error) {
+      if (this.v$.wallet.path.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,

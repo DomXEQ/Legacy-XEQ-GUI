@@ -49,7 +49,6 @@
 
 <script>
 import { mapState } from "vuex";
-import { clipboard } from "electron";
 
 export default {
   name: "SettingsTroubleshooting",
@@ -109,7 +108,7 @@ export default {
             }] ${e.message}`
         )
         .join("\n");
-      clipboard.writeText(text || "No logs to copy");
+      window.electronAPI.copyToClipboard(text || "No logs to copy");
       this.$q.notify({
         type: "positive",
         timeout: 1500,

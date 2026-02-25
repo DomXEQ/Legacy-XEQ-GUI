@@ -16,13 +16,13 @@
         >
           <q-item
             v-for="(tx, i) in tx_list_paged"
-            :key="`${tx.txid}-${tx.type}-${i}`"
+            :key="tx ? `${tx.txid || i}-${(tx.type != null ? tx.type : '')}-${i}` : `tx-${i}`"
             class="oxen-list-item transaction"
-            :class="'tx-' + tx.type"
-            @click.native="details(tx)"
+            :class="'tx-' + (tx && tx.type != null ? tx.type : '')"
+            @click="details(tx)"
           >
             <q-item-section class="type">
-              <div>{{ tx.type | typeToString }}</div>
+              <div>{{ typeToString(tx.type) }}</div>
             </q-item-section>
             <q-item-label class="main">
               <q-item-label class="amount">
@@ -48,7 +48,6 @@
                 <timeago
                   :datetime="tx.timestamp * 1000"
                   :auto-update="60"
-                  :locale="$i18n.locale"
                 />
               </q-item-label>
               <q-item-label caption>{{ formatHeight(tx) }}</q-item-label>
@@ -60,7 +59,6 @@
               @openExplorer="openExplorer(tx.txid)"
             />
           </q-item>
-          <QSpinnerDots slot="message" :size="40"></QSpinnerDots>
         </q-list>
       </q-infinite-scroll>
     </template>
@@ -70,43 +68,14 @@
 </template>
 
 <script>
-const { clipboard } = require("electron");
 import { mapState } from "vuex";
-import { QSpinnerDots } from "quasar";
 import TxDetails from "components/tx_details";
 import FormatOxen from "components/format_oxen";
-import { i18n } from "boot/i18n";
 import ContextMenu from "components/menus/contextmenu";
 
 export default {
   name: "TxList",
-  filters: {
-    typeToString: function(value) {
-      switch (value) {
-        case "in":
-          return i18n.t("strings.transactions.received");
-        case "out":
-          return i18n.t("strings.transactions.sent");
-        case "failed":
-          return i18n.t("strings.transactions.types.failed");
-        case "pending":
-        case "pool":
-          return i18n.t("strings.transactions.types.pending");
-        case "miner":
-          return i18n.t("strings.transactions.types.miner");
-        case "snode":
-          return i18n.t("strings.transactions.types.serviceNode");
-        case "gov":
-          return i18n.t("strings.transactions.types.governance");
-        case "stake":
-          return i18n.t("strings.transactions.types.stake");
-        default:
-          return "-";
-      }
-    }
-  },
   components: {
-    QSpinnerDots,
     TxDetails,
     FormatOxen,
     ContextMenu
@@ -151,13 +120,29 @@ export default {
       menuItems
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    current_height: state => state.gateway.daemon.info.height,
-    wallet_height: state => state.gateway.wallet.info.height,
-    tx_list: state => state.gateway.wallet.transactions.tx_list,
-    address_book: state => state.gateway.wallet.address_list.address_book
-  }),
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      current_height: state => state.gateway.daemon.info.height,
+      wallet_height: state => state.gateway.wallet.info.height,
+      tx_list_raw: state =>
+        (state.gateway &&
+          state.gateway.wallet &&
+          state.gateway.wallet.transactions &&
+          state.gateway.wallet.transactions.tx_list) ||
+        [],
+      address_book: state =>
+        (state.gateway &&
+          state.gateway.wallet &&
+          state.gateway.wallet.address_list &&
+          state.gateway.wallet.address_list.address_book) ||
+        []
+    }),
+    tx_list() {
+      const list = this.tx_list_raw || [];
+      return Array.isArray(list) ? list : [];
+    }
+  },
   watch: {
     wallet_height: {
       handler(val, old) {
@@ -168,9 +153,12 @@ export default {
     },
     tx_list: {
       handler(val, old) {
-        // Check if anything changed in the tx list
-        if (val.length == old.length) {
-          const changed = val.filter((v, i) => v.note !== old[i].note);
+        const prev = old || [];
+        const curr = val || [];
+        if (curr.length === prev.length) {
+          const changed = curr.filter(
+            (v, i) => v && prev[i] && v.note !== prev[i].note
+          );
           if (changed.length === 0) return;
         }
         this.filterTxList();
@@ -209,11 +197,36 @@ export default {
     this.pageTxList();
   },
   methods: {
+    typeToString(value) {
+      switch (value) {
+        case "in":
+          return this.$t("strings.transactions.received");
+        case "out":
+          return this.$t("strings.transactions.sent");
+        case "failed":
+          return this.$t("strings.transactions.types.failed");
+        case "pending":
+        case "pool":
+          return this.$t("strings.transactions.types.pending");
+        case "miner":
+          return this.$t("strings.transactions.types.miner");
+        case "snode":
+          return this.$t("strings.transactions.types.serviceNode");
+        case "gov":
+          return this.$t("strings.transactions.types.governance");
+        case "stake":
+          return this.$t("strings.transactions.types.stake");
+        default:
+          return "-";
+      }
+    },
     filterTxList() {
+      const list = this.tx_list || [];
       const all_in = ["in", "pool", "miner", "snode", "gov"];
       const all_out = ["out", "pending", "stake"];
       const all_pending = ["pending", "pool"];
-      this.tx_list_filtered = this.tx_list.filter(tx => {
+      this.tx_list_filtered = list.filter(tx => {
+        if (!tx || tx.txid == null) return false;
         let valid = true;
         if (this.type === "all_in" && !all_in.includes(tx.type)) {
           return false;
@@ -320,7 +333,7 @@ export default {
         );
     },
     copyTxId(txid) {
-      clipboard.writeText(txid);
+      window.electronAPI.copyToClipboard(txid);
       this.$q.notify({
         type: "positive",
         timeout: 1000,

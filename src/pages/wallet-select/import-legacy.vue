@@ -18,9 +18,9 @@
         <q-input
           v-model="wallet.name"
           float-label="New wallet name"
-          :error="$v.wallet.name.$error"
+          :error="v$.wallet.name.$error"
           :dark="theme == 'dark'"
-          @blur="$v.wallet.name.$touch"
+          @blur="v$.wallet.name.$touch"
         />
       </q-field>
 
@@ -53,9 +53,13 @@
 </template>
 
 <script>
-import { required } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required } from "@vuelidate/validators";
 import { mapState } from "vuex";
 export default {
+  setup() {
+    return { v$: useVuelidate() };
+  },
   data() {
     return {
       wallet: {
@@ -67,39 +71,40 @@ export default {
       legacy_type: "0"
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    status: state => state.gateway.wallet.status,
-    wallets_legacy: state => state.gateway.wallets.legacy,
-    wallet_path(state) {
-      return state.gateway.wallets.legacy[this.legacy_type].path;
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      status: state => state.gateway.wallet.status,
+      wallets_legacy: state => state.gateway.wallets.legacy,
+      wallet_path(state) {
+        return state.gateway.wallets.legacy[this.legacy_type].path;
+      }
+    }),
+    statusCode() {
+      return this.status ? this.status.code : 1;
     }
-  }),
+  },
   watch: {
-    status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case 1:
-            break;
-          case 0:
-            this.$q.loading.hide();
-            this.$router.replace({
-              path: "/wallet-select/created"
-            });
-            break;
-          default:
-            this.$q.loading.hide();
-            this.$q.notify({
-              type: "negative",
-              timeout: 1000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+    statusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case 1:
+          break;
+        case 0:
+          this.$q.loading.hide();
+          this.$router.replace({
+            path: "/wallet-select/created"
+          });
+          break;
+        default:
+          this.$q.loading.hide();
+          this.$q.notify({
+            type: "negative",
+            timeout: 1000,
+            message: this.status.message || ""
+          });
+          break;
+      }
     }
   },
   validations: {
@@ -109,9 +114,9 @@ export default {
   },
   methods: {
     import_wallet() {
-      this.$v.wallet.$touch();
+      this.v$.wallet.$touch();
 
-      if (this.$v.wallet.$error) {
+      if (this.v$.wallet.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,

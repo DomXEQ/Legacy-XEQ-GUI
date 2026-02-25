@@ -3,22 +3,39 @@
 @import 'quasar.variables'
 @import 'flags'
 
-// Font Definitions
+// Self-hosted JetBrains Mono - no external requests, air-gap compatible
 @font-face {
-    font-family: 'RobotoMono-Light';
-    src: url(themes/RobotoMono-Light.ttf)
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../assets/fonts/JetBrainsMono-Regular.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../assets/fonts/JetBrainsMono-Medium.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('../assets/fonts/JetBrainsMono-SemiBold.ttf') format('truetype');
 }
 
-// Base font family - JetBrains Mono throughout
+// Base font family - JetBrains Mono throughout (self-hosted only)
 body, html {
-    font-family: 'JetBrains Mono', 'RobotoMono-Light', monospace;
+    font-family: 'JetBrains Mono', monospace;
     background: $bg-void;
     color: $text-primary;
 }
 
 // Monospace utility class (same as base now)
 .monospace, .mono {
-    font-family: 'JetBrains Mono', 'RobotoMono-Light', monospace;
+    font-family: 'JetBrains Mono', monospace;
     letter-spacing: -0.02em;
 }
 
@@ -1055,10 +1072,42 @@ footer,
 }
 
 // Button refinements
+// Primary buttons: bright cyan background with white text
 .q-btn.q-btn--standard {
     &.bg-primary {
-        color: $bg-void;
+        background: $primary !important;
+        color: white !important;
         font-weight: 600;
+
+        &:hover {
+            background: lighten($primary, 10%) !important;
+        }
+    }
+}
+
+// Accent buttons: darker background with white text (like nav buttons)
+.q-btn.bg-accent {
+    background: $bg-card !important;
+    color: white !important;
+    border: 1px solid $border-subtle;
+    font-weight: 500;
+
+    &:hover {
+        background: $bg-hover !important;
+        border-color: $border-default;
+    }
+}
+
+// Secondary buttons: similar darker style
+.q-btn.bg-secondary {
+    background: $bg-card !important;
+    color: white !important;
+    border: 1px solid $border-subtle;
+    font-weight: 500;
+
+    &:hover {
+        background: $bg-hover !important;
+        border-color: $border-default;
     }
 }
 

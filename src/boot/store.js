@@ -1,6 +1,6 @@
 import { boot } from "quasar/wrappers";
-import axios from "axios";
+import store from "src/store";
 
 export default boot(({ app }) => {
-  app.config.globalProperties.$axios = axios;
+  app.use(store);
 });

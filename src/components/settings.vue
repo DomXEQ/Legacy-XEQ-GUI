@@ -35,7 +35,7 @@
               v-for="entry in daemon.connections"
               :key="entry.address"
               clickable
-              @click.native="showPeerDetails(entry)"
+              @click="showPeerDetails(entry)"
             >
               <q-item-label>
                 <q-item-label>{{ entry.address }}</q-item-label>

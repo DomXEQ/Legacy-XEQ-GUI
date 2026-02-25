@@ -1,16 +1,16 @@
 {
-  "name": "equilibria-electron-wallet",
-  "version": "1.0.9",
-  "description": "Modern GUI interface for Equilibria Currency",
-  "productName": "Equilibria Electron Wallet",
+  "name": "legacy-xeq-gui",
+  "version": "2.0.0",
+  "description": "GUI wallet for the legacy XEQ blockchain",
+  "productName": "Legacy XEQ GUI",
   "repository": {
     "type": "git",
-    "url": "https://github.com/EquilibriaHorizon/equilibria-electron-gui-wallet.git"
+    "url": "https://github.com/DomXEQ/Legacy-XEQ-GUI.git"
   },
-  "cordovaId": "com.equilibria.wallet",
+  "cordovaId": "com.xeq.legacy-wallet",
   "author": {
-    "name": "Equilibria",
-    "email": "info@equilibria.network"
+    "name": "DomXEQ",
+    "email": ""
   },
   "private": true,
   "scripts": {
@@ -25,72 +25,45 @@
     "ready": "npm run lint && npm run format"
   },
   "dependencies": {
-    "axios": "^0.18.1",
-    "bunyan": "^1.8.14",
-    "electron-is-dev": "^1.0.1",
-    "electron-updater": "^4.2.0",
+    "@vuelidate/core": "^2.0.3",
+    "@vuelidate/validators": "^2.0.4",
+    "autoprefixer": "^10.4.24",
+    "axios": "^1.7.9",
+    "bunyan": "^1.8.15",
+    "electron-updater": "^6.3.9",
     "electron-window-state": "^5.0.3",
-    "fs-extra": "^8.1.0",
+    "fs-extra": "^11.2.0",
     "object-assign-deep": "^0.4.0",
     "portscanner": "^2.2.0",
     "promise-queue": "^2.2.5",
-    "qrcode.vue": "^1.6.1",
-    "quasar": "^1.13.1",
-    "request": "^2.88.0",
-    "request-promise": "^4.2.4",
-    "semver": "^7.3.2",
-    "upath": "^1.2.0",
-    "vue-i18n": "^8.9.0",
-    "vue-timeago": "^5.1.2",
-    "vuelidate": "^0.7.4"
+    "qrcode.vue": "^3.6.0",
+    "quasar": "^2.17.7",
+    "semver": "^7.6.3",
+    "upath": "^2.0.1",
+    "vue": "^3.5.0",
+    "vue-i18n": "^11.1.2",
+    "vue-timeago3": "^2.3.2",
+    "vuex": "^4.1.0",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
-    "@quasar/app": "^2.0.8",
-    "@quasar/extras": "^1.9.4",
-    "babel-eslint": "^10.1.0",
-    "cross-env": "^7.0.3",
-    "devtron": "^1.4.0",
-    "dotenv": "^8.1.0",
-    "electron": "^4.1.1",
-    "electron-builder": "^23.0.3",
-    "electron-debug": "^2.1.0",
-    "electron-devtools-installer": "^2.2.4",
-    "electron-notarize": "^0.1.1",
-    "eslint": "^5.16.0",
-    "eslint-config-prettier": "^6.12.0",
-    "eslint-friendly-formatter": "^4.0.1",
-    "eslint-loader": "^2.2.1",
-    "eslint-plugin-import": "^2.16.0",
-    "eslint-plugin-node": "^8.0.1",
-    "eslint-plugin-prettier": "^3.1.4",
-    "eslint-plugin-promise": "^4.0.1",
-    "eslint-plugin-vue": "^5.2.3",
-    "husky": "^4.2.3",
-    "lint-staged": "^10.0.8",
-    "prettier": "^1.19.1",
-    "sass-loader": "^7.1.0",
-    "strip-ansi": "^3.0.1"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*.+(js|jsx|vue)": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.+(json|yml|yaml|css|md)": "prettier --write"
+    "@electron/notarize": "^2.5.0",
+    "@quasar/app-vite": "^2.1.0",
+    "@quasar/extras": "^1.16.15",
+    "dotenv": "^16.4.7",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
+    "eslint": "^9.17.0",
+    "eslint-plugin-vue": "^9.32.0",
+    "prettier": "^3.4.2",
+    "stylus": "^0.64.0",
+    "vue-router": "^4.5.0"
   },
   "engines": {
-    "node": ">= 8.9.0",
-    "npm": ">= 5.6.0",
-    "yarn": ">= 1.6.0"
+    "node": ">= 20.0.0",
+    "npm": ">= 10.0.0"
   },
   "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not ie <= 10"
+    "last 2 Chrome versions"
   ]
 }

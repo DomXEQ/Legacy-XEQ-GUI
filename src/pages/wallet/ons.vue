@@ -25,8 +25,7 @@
 <script>
 import ONSPurchase from "components/ons/ons_purchase";
 import MyONS from "components/ons/ons_myons";
-import Vue from "vue";
-import _ from "lodash";
+import { nextTick } from "vue";
 
 export default {
   components: {
@@ -41,7 +40,8 @@ export default {
   methods: {
     purchasePageAction(record, action) {
       // don't update the pointer to the record (else it'll update on the records page)
-      let recordCopy = _.cloneDeep(record);
+      // structuredClone cannot clone Vue reactive proxies, use JSON round-trip instead
+      let recordCopy = JSON.parse(JSON.stringify(record));
 
       if (record.type === "lokinet" && record.name.endsWith(".loki")) {
         // The UI expects no ".loki" extension
@@ -51,7 +51,7 @@ export default {
       this.screen = "purchase";
       // refs are not dynamic, so let the purchase tab render
       // then we can call the ref method
-      Vue.nextTick().then(() => {
+      nextTick().then(() => {
         this.$refs.purchase[action](recordCopy);
       });
     },

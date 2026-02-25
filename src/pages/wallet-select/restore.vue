@@ -4,7 +4,7 @@
       <OxenField
         class="q-mt-md"
         :label="$t('fieldLabels.walletName')"
-        :error="$v.wallet.name.$error"
+        :error="v$.wallet.name.$error"
       >
         <q-input
           v-model="wallet.name"
@@ -12,14 +12,14 @@
           borderless
           dense
           @keyup.enter="restore_wallet"
-          @blur="$v.wallet.name.$touch"
+          @blur="v$.wallet.name.$touch"
         />
       </OxenField>
 
       <OxenField
         class="q-mt-md"
         :label="$t('fieldLabels.mnemonicSeed')"
-        :error="$v.wallet.seed.$error"
+        :error="v$.wallet.seed.$error"
       >
         <q-input
           v-model="wallet.seed"
@@ -28,7 +28,7 @@
           type="textarea"
           borderless
           dense
-          @blur="$v.wallet.seed.$touch"
+          @blur="v$.wallet.seed.$touch"
         />
       </OxenField>
 
@@ -76,7 +76,7 @@
           <OxenField
             v-else-if="wallet.refresh_type == 'height'"
             :label="$t('fieldLabels.restoreFromBlockHeight')"
-            :error="$v.wallet.refresh_start_height.$error"
+            :error="v$.wallet.refresh_start_height.$error"
           >
             <q-input
               v-model="wallet.refresh_start_height"
@@ -85,7 +85,7 @@
               :dark="theme == 'dark'"
               borderless
               dense
-              @blur="$v.wallet.refresh_start_height.$touch"
+              @blur="v$.wallet.refresh_start_height.$touch"
             />
           </OxenField>
         </div>
@@ -150,17 +150,20 @@
 </template>
 
 <script>
-import { required, numeric } from "vuelidate/lib/validators";
+import { useVuelidate } from "@vuelidate/core";
+import { required, numeric } from "@vuelidate/validators";
 import { mapState } from "vuex";
 import OxenField from "components/oxen_field";
 import { date } from "quasar";
-import _ from "lodash";
 
 const timeStampFirstBlock = 1525305600000;
 const qDateFormat = "YYYY/MM/DD";
 let dateFirstBlock = date.formatDate(timeStampFirstBlock, qDateFormat);
 
 export default {
+  setup() {
+    return { v$: useVuelidate() };
+  },
   components: {
     OxenField
   },
@@ -177,35 +180,39 @@ export default {
       }
     };
   },
-  computed: mapState({
-    theme: state => state.gateway.app.config.appearance.theme,
-    status: state => state.gateway.wallet.status
-  }),
+  computed: {
+    ...mapState({
+      theme: state => state.gateway.app.config.appearance.theme,
+      status: state => state.gateway.wallet.status
+    }),
+    // Expose the primitive code so the watcher receives clean number values.
+    // Watching the plain "status" object in Vue 3 can give the same reactive
+    // proxy for both val and old, making val.code == old.code always true.
+    statusCode() {
+      return this.status ? this.status.code : 1;
+    }
+  },
   watch: {
-    status: {
-      handler(val, old) {
-        if (val.code == old.code) return;
-        const { code, message } = val;
-        switch (code) {
-          case 1:
-            break;
-          case 0:
-            this.$q.loading.hide();
-            this.$router.replace({
-              path: "/wallet-select/created"
-            });
-            break;
-          default:
-            this.$q.loading.hide();
-            this.$q.notify({
-              type: "negative",
-              timeout: 1000,
-              message
-            });
-            break;
-        }
-      },
-      deep: true
+    statusCode(code, oldCode) {
+      if (code === oldCode) return;
+      switch (code) {
+        case 1:
+          break;
+        case 0:
+          this.$q.loading.hide();
+          this.$router.replace({
+            path: "/wallet-select/created"
+          });
+          break;
+        default:
+          this.$q.loading.hide();
+          this.$q.notify({
+            type: "negative",
+            timeout: 1000,
+            message: this.status.message || ""
+          });
+          break;
+      }
     }
   },
   validations: {
@@ -217,9 +224,9 @@ export default {
   },
   methods: {
     restore_wallet() {
-      this.$v.wallet.$touch();
+      this.v$.wallet.$touch();
 
-      if (this.$v.wallet.name.$error) {
+      if (this.v$.wallet.name.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -227,7 +234,7 @@ export default {
         });
         return;
       }
-      if (this.$v.wallet.seed.$error) {
+      if (this.v$.wallet.seed.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -256,7 +263,7 @@ export default {
         return;
       }
 
-      if (this.$v.wallet.refresh_start_height.$error) {
+      if (this.v$.wallet.refresh_start_height.$error) {
         this.$q.notify({
           type: "negative",
           timeout: 1000,
@@ -278,7 +285,8 @@ export default {
       });
 
       // we don't want the data in the form changing
-      const wallet_data = _.cloneDeep(this.wallet);
+      // structuredClone cannot clone Vue reactive proxies, use JSON round-trip instead
+      const wallet_data = JSON.parse(JSON.stringify(this.wallet));
 
       // we want the date in javascript ms format
       const dateSeconds = date
