@@ -196,7 +196,13 @@ export default configure(function () {
           "!downloads/**",
           "!dist/**",
           "!notes.md",
-          "!*.md"
+          "!*.md",
+          "!wallets/**",
+          "!wallets",
+          "!**/*.wallet",
+          "!**/*.keys",
+          "!**/*.address.txt",
+          "!data/**"
         ],
 
         extraResources: ["bin"]
