@@ -87,7 +87,7 @@ jobs:
       - name: Upload to latest release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v1
+          tag_name: v2
           files: |
             dist/electron/Packaged/*.AppImage
             dist/electron/Packaged/*.deb
