@@ -102,6 +102,7 @@ jspm_packages/
 
 # Internal dev notes
 notes.md
+commit-msg.txt
 
 # Yarn Integrity file
 .yarn-integrity

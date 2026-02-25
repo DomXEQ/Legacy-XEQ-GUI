@@ -121,6 +121,7 @@ export default configure(function () {
       bundler: "builder",
 
       builder: {
+        npmRebuild: false,
         appId: "com.xeq.legacy-wallet",
         productName: "Legacy XEQ GUI",
         copyright: "Copyright © 2025 XEQ",

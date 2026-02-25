@@ -17,6 +17,7 @@ const portscanner = require("portscanner");
 const windowStateKeeper = require("electron-window-state");
 const path = require("upath");
 const fs = require("fs");
+const { pathToFileURL } = require("url");
 
 if (
   process.env.NODE_OPTIONS &&
@@ -212,12 +213,25 @@ function createWindow() {
     }
   });
 
-  mainWindow.loadURL(process.env.APP_URL);
+  // In production packaged build, APP_URL may be unset; build file URL from __dirname
+  let appUrl = process.env.APP_URL;
+  if (!appUrl && process.env.PROD) {
+    const indexHere = path.join(__dirname, "index.html");
+    const indexParent = path.join(__dirname, "..", "index.html");
+    const indexPath = fs.existsSync(indexHere)
+      ? indexHere
+      : fs.existsSync(indexParent)
+        ? indexParent
+        : indexHere;
+    appUrl = pathToFileURL(indexPath).href;
+  }
+  appUrl = appUrl || "";
+  mainWindow.loadURL(appUrl);
   mainWindowState.manage(mainWindow);
 
   // Prevent the renderer from navigating away from the app.
   mainWindow.webContents.on("will-navigate", (e, url) => {
-    if (url !== process.env.APP_URL && !url.startsWith(process.env.APP_URL)) {
+    if (url !== appUrl && !url.startsWith(appUrl)) {
       e.preventDefault();
     }
   });

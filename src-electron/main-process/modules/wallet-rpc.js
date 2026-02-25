@@ -982,26 +982,17 @@ export class WalletRPC {
   }
 
   finalizeNewWallet(filename) {
-    // Start the heartbeat immediately so that status: { code: 0 } is sent to
-    // the UI as soon as the first heartbeat completes (5 s timeout per call).
-    // Previously the heartbeat was only started inside the Promise.all .then(),
-    // meaning that if the wallet-rpc was busy scanning blocks the 6 no-timeout
-    // RPC calls below would block the serial queue and the heartbeat (and
-    // therefore the success signal) would never fire, leaving the loading
-    // spinner stuck indefinitely.
-    if (this.isHardwareWallet(filename)) {
-      this.startHeartbeat(10);
-    } else {
-      this.startHeartbeat();
-    }
-
+    // Fetch wallet info and secret keys with timeouts to prevent blocking.
+    // We send the wallet data (including secrets) first, then start the
+    // heartbeat. This ensures the UI has the mnemonic before navigating
+    // to the created page (which is triggered by status code 0).
     Promise.all([
-      this.sendRPC("get_address", { account_index: 0 }),
-      this.sendRPC("getheight"),
-      this.sendRPC("getbalance", { account_index: 0 }),
-      this.sendRPC("query_key", { key_type: "mnemonic" }),
-      this.sendRPC("query_key", { key_type: "spend_key" }),
-      this.sendRPC("query_key", { key_type: "view_key" })
+      this.sendRPC("get_address", { account_index: 0 }, 10000),
+      this.sendRPC("getheight", {}, 10000),
+      this.sendRPC("getbalance", { account_index: 0 }, 10000),
+      this.sendRPC("query_key", { key_type: "mnemonic" }, 10000),
+      this.sendRPC("query_key", { key_type: "spend_key" }, 10000),
+      this.sendRPC("query_key", { key_type: "view_key" }, 10000)
     ]).then(data => {
       let wallet = {
         info: {
@@ -1062,7 +1053,16 @@ export class WalletRPC {
         }
       });
 
+      // Send wallet data with secrets FIRST
       this.sendGateway("set_wallet_data", wallet);
+
+      // THEN start heartbeat which will send status: { code: 0 }
+      // This ensures the UI has the mnemonic before navigating to created page
+      if (this.isHardwareWallet(filename)) {
+        this.startHeartbeat(10);
+      } else {
+        this.startHeartbeat();
+      }
     });
   }
 
